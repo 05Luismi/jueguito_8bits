@@ -10,6 +10,14 @@ Juego de 8 bits para el aula en el que todos luchan contra todos y solo puede qu
 
 La primera vez, Windows pedirá permiso en el firewall para Node.js: marca **Redes privadas** y acepta.
 
+## Publicar para el aula (Render)
+1. En [Render](https://render.com), crea **New + > Blueprint** y conecta este repositorio de GitHub.
+2. Selecciona el archivo `render.yaml` y establece un valor largo y privado para `TEACHER_KEY`.
+3. Cuando termine el despliegue, Render te dará una URL como `https://jueguito-8bits.onrender.com`.
+4. Comparte esa URL con el alumnado. Para abrir el panel del profesor usa `https://jueguito-8bits.onrender.com/?teacher=TU_TEACHER_KEY`.
+
+No compartas la URL que contiene `teacher`, pues permite iniciar y terminar partidas. En el plan gratuito el primer acceso puede tardar unos segundos mientras el servicio se activa.
+
 ## Reglas
 - 3 vidas y **10 tiros como máximo** por partida.
 - A los 25 s la zona roja empieza a cerrarse, y fuera de ella pierdes vida. Así la partida siempre termina, aunque todos se queden sin balas.

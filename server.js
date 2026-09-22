@@ -11,6 +11,9 @@ const { WebSocketServer } = require('ws');
 
 // ---------- Configuración ----------
 const PORT = Number(process.env.PORT) || 3000;
+// En producción define esta clave en el panel del proveedor. Solo quien la
+// conozca podrá abrir el panel del profesor mediante ?teacher=CLAVE.
+const TEACHER_KEY = process.env.TEACHER_KEY || 'profesor-local';
 const TICK_MS = 1000 / 30;          // 30 actualizaciones por segundo
 const TILE = 16;
 const MAX_SHOTS = 10;               // 10 tiros como máximo por jugador y partida
@@ -293,7 +296,9 @@ const wss = new WebSocketServer({ server, maxPayload: 1024 });
 
 wss.on('connection', (ws, req) => {
   const addr = req.socket.remoteAddress || '';
-  const isHost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(addr);
+  const requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+  const isLocal = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(addr);
+  const isHost = isLocal || requestUrl.searchParams.get('teacher') === TEACHER_KEY;
   const p = {
     id: nextId++, ws, name: '', joined: false, isHost,
     color: COLORS[colorIdx++ % COLORS.length],

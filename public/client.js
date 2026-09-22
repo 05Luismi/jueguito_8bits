@@ -60,7 +60,11 @@ function send(obj) {
 }
 
 function connect() {
-  ws = new WebSocket(`ws://${location.host}`);
+  // ws:// para desarrollo local y wss:// cuando la página se sirve por HTTPS.
+  // Conservamos la clave del profesor únicamente en la conexión del profesor.
+  const wsUrl = new URL(location.href);
+  wsUrl.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(wsUrl);
   ws.onopen = () => { $('#offline').hidden = true; };
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
@@ -86,7 +90,11 @@ function onWelcome(m) {
 
   const list = $('#addrList');
   list.replaceChildren();
-  const ips = m.ips.length ? m.ips : [location.hostname];
+  const localHosts = ['localhost', '127.0.0.1', '::1'];
+  // En Render mostramos el enlace público; en local mantenemos las IP del aula.
+  const ips = localHosts.includes(location.hostname)
+    ? (m.ips.length ? m.ips : [location.hostname])
+    : [location.host];
   for (const ip of ips) {
     const d = document.createElement('div');
     d.textContent = `${ip}:${m.port}`;

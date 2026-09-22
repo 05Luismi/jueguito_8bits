@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: jueguito-8bits
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: TEACHER_KEY
+        sync: false
