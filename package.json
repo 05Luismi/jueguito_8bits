@@ -4,7 +4,7 @@
   "description": "Battle royale 8 bits para el aula por WebSockets",
   "main": "server.js",
 "scripts": {
-  "dev": "node server.js",
+  "dev": "node scripts/open-vercel.js",
   "start": "node server.js"
 },
   "dependencies": {
