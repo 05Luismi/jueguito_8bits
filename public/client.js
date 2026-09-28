@@ -2,6 +2,7 @@
 //  8 BITS BATTLE - Cliente (navegador de cada alumno)
 // ============================================================
 const $ = s => document.querySelector(s);
+const PUBLIC_GAME_URL = 'https://jueguito-8bits.vercel.app/';
 const canvas = $('#canvas');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
@@ -95,7 +96,7 @@ function onWelcome(m) {
   // En local mostramos las IP de la red del aula con el puerto configurado.
   const isPublicPage = location.protocol === 'https:';
   const playerUrls = isPublicPage
-    ? [`https://${location.hostname}/?player=1`]
+    ? [`${PUBLIC_GAME_URL}?player=1`]
     : (localHosts.includes(location.hostname) ? (m.ips.length ? m.ips : [location.hostname]) : [location.hostname])
       .map(ip => `http://${ip}:${m.port}/?player=1`);
   for (const url of playerUrls) {
