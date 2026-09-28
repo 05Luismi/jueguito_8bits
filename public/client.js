@@ -91,14 +91,19 @@ function onWelcome(m) {
   const list = $('#addrList');
   list.replaceChildren();
   const localHosts = ['localhost', '127.0.0.1', '::1'];
-  // En Render mostramos el enlace público; en local mantenemos las IP del aula.
-  const ips = localHosts.includes(location.hostname)
-    ? (m.ips.length ? m.ips : [location.hostname])
-    : [location.host];
-  for (const ip of ips) {
-    const d = document.createElement('div');
-    d.textContent = `${ip}:${m.port}`;
-    list.appendChild(d);
+  // En producción el enlace es el dominio HTTPS (sin añadir el puerto local).
+  // En local mostramos las IP de la red del aula con el puerto configurado.
+  const isLocalPage = localHosts.includes(location.hostname);
+  const playerUrls = isLocalPage
+    ? (m.ips.length ? m.ips : [location.hostname]).map(ip => `http://${ip}:${m.port}/`)
+    : [new URL('/', location.origin).href];
+  for (const url of playerUrls) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.textContent = url;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    list.appendChild(link);
   }
 
   $('#hostPanel').hidden = !isHost;

@@ -18,6 +18,8 @@ La primera vez, Windows pedirá permiso en el firewall para Node.js: marca **Red
 
 No compartas la URL que contiene `teacher`, pues permite iniciar y terminar partidas. En el plan gratuito el primer acceso puede tardar unos segundos mientras el servicio se activa.
 
+Comparte el enlace de jugador que aparece en el panel. En despliegues públicos debe usar el dominio HTTPS tal como lo proporciona Vercel, sin añadir `:3000`; ese puerto solo se usa al ejecutar el servidor localmente.
+
 ## Reglas
 - 3 vidas y **10 tiros como máximo** por partida.
 - A los 25 s la zona roja empieza a cerrarse, y fuera de ella pierdes vida. Así la partida siempre termina, aunque todos se queden sin balas.
