@@ -95,9 +95,9 @@ function onWelcome(m) {
   // En local mostramos las IP de la red del aula con el puerto configurado.
   const isPublicPage = location.protocol === 'https:';
   const playerUrls = isPublicPage
-    ? [`https://${location.hostname}/`]
+    ? [`https://${location.hostname}/?player=1`]
     : (localHosts.includes(location.hostname) ? (m.ips.length ? m.ips : [location.hostname]) : [location.hostname])
-      .map(ip => `http://${ip}:${m.port}/`);
+      .map(ip => `http://${ip}:${m.port}/?player=1`);
   for (const url of playerUrls) {
     const link = document.createElement('a');
     link.href = url;

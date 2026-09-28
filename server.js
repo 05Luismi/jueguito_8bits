@@ -298,7 +298,10 @@ wss.on('connection', (ws, req) => {
   const addr = req.socket.remoteAddress || '';
   const requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const isLocal = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(addr);
-  const isHost = isLocal || requestUrl.searchParams.get('teacher') === TEACHER_KEY;
+  // El enlace compartido de jugadores debe abrir siempre el modo alumno,
+  // incluso si alguien lo abre desde una URL que también contiene la clave del profesor.
+  const isPlayer = requestUrl.searchParams.get('player') === '1';
+  const isHost = !isPlayer && (isLocal || requestUrl.searchParams.get('teacher') === TEACHER_KEY);
   const p = {
     id: nextId++, ws, name: '', joined: false, isHost,
     color: COLORS[colorIdx++ % COLORS.length],
