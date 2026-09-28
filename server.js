@@ -289,13 +289,26 @@ function update() {
       if (b.x < 18 || b.x > WORLD_W - 18) b.dir *= -1;
       b.y = floorYAt(level, b.floor, b.x) - 7 - Math.abs(Math.sin(now / 175 + b.phase)) * 7;
     } else {
-      b.x += b.dir * b.speed;
-      if (b.x < 18 || b.x > WORLD_W - 18) {
-        if (b.floor > 0) {
-          b.floor--;
+      if (b.falling) {
+        b.y = Math.min(b.dropTarget, b.y + 2.8);
+        if (b.y >= b.dropTarget) {
+          b.falling = false;
+          b.dir = b.nextDir;
+          b.nextDir = undefined;
+        }
+      } else {
+        b.x += b.dir * b.speed;
+        if (b.x < 18 || b.x > WORLD_W - 18) {
+          if (b.floor > 0) {
+            b.x = Math.max(18, Math.min(WORLD_W - 18, b.x));
+            b.floor--;
+            b.falling = true;
+            b.nextDir = -b.dir;
+            b.dropTarget = floorYAt(level, b.floor, b.x);
+          } else b.remove = true;
+        } else {
           b.y = floorYAt(level, b.floor, b.x);
-          b.dir *= -1;
-        } else b.remove = true;
+        }
       }
     }
     for (const p of active) {
@@ -344,7 +357,7 @@ function snapshot() {
       cl: p.climbing, hm: now < p.hammerUntil, hcd: Math.max(0, p.hammerReadyAt - now), k: p.k,
       inv: now < p.invulnerableUntil,
     })),
-    b: hazards.map(b => ({ x: Math.round(b.x), y: Math.round(b.y), floor: b.floor, kind: b.kind })),
+    b: hazards.map(b => ({ x: Math.round(b.x), y: Math.round(b.y), floor: b.floor, kind: b.kind, d: b.dir })),
     kt: now < kongThrowUntil,
     e: events,
   });

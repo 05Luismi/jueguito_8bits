@@ -330,35 +330,68 @@ function drawWorld(level) {
     ctx.fillRect(x + 4, top, 2, bottom - top);
     for (let y = top + 2; y < bottom; y += 7) ctx.fillRect(x - 5, y, 11, 2);
   }
-  drawKong(52, floorYAt(level, floors.length - 1, 52), curr.kt);
-  drawPauline(level.goalX, floorYAt(level, floors.length - 1, level.goalX));
+  const topFloor = floors.length - 1;
+  const kongX = 52;
+  const paulineX = level.goalX;
+  const kongFeet = floorYAt(level, topFloor, kongX) - 30;
+  const paulineFeet = floorYAt(level, topFloor, paulineX) - 30;
+  drawRescuePlatform(18, 91, kongFeet, level.theme);
+  drawRescuePlatform(379, 462, paulineFeet, level.theme);
+  drawKong(kongX, kongFeet, curr.kt, performance.now());
+  drawPauline(paulineX, paulineFeet);
   for (const hazard of curr.b) {
     if (hazard.kind === 'fireball') drawFireball(hazard.x, hazard.y, performance.now());
-    else drawBarrel(hazard.x, hazard.y - 7, hazard.kind, performance.now());
+    else drawBarrel(hazard.x, hazard.y - 7, hazard.kind, performance.now(), hazard.d);
   }
 }
 
-function drawKong(x, feet, throwing = false) {
-  const y = feet - 25;
+function drawRescuePlatform(left, right, feet, theme) {
+  const y = Math.round(feet);
+  ctx.fillStyle = '#151020';
+  ctx.fillRect(left - 2, y + 5, right - left + 4, 3);
+  ctx.fillStyle = theme.beam;
+  ctx.fillRect(left, y, right - left, 5);
+  ctx.fillStyle = theme.trim;
+  ctx.fillRect(left, y, right - left, 2);
+  ctx.fillStyle = '#151020';
+  for (let x = left + 7; x < right - 4; x += 13) {
+    ctx.fillRect(x, y + 3, 2, 2);
+  }
+  ctx.fillStyle = theme.beam;
+  ctx.fillRect(left + 3, y + 6, 3, 5);
+  ctx.fillRect(right - 6, y + 6, 3, 5);
+}
+
+function drawKong(x, feet, throwing = false, now = 0) {
+  const step = Math.floor(now / 120) % 2;
+  const y = feet - 25 + (throwing ? -1 : 0);
   ctx.fillStyle = '#ab5236';
-  ctx.fillRect(x - 11, y + 7, 22, 14);
-  ctx.fillRect(x - 15, y + 10, 5, 9);
-  ctx.fillRect(x + 10, throwing ? y + 5 : y + 10, 5, throwing ? 12 : 9);
+  ctx.fillRect(x - 12, y + 8, 24, 13);
+  ctx.fillRect(x - 15, y + 10 + step, 5, 9 - step);
+  ctx.fillRect(x + 10, throwing ? y + 4 : y + 10 - step, 5, throwing ? 12 : 9 + step);
   if (throwing) {
     ctx.fillStyle = '#ffccaa';
-    ctx.fillRect(x + 14, y + 4, 4, 4);
+    ctx.fillRect(x + 14, y + 2, 5, 5);
   }
   ctx.fillStyle = '#ffccaa';
-  ctx.fillRect(x - 8, y + 2, 16, 9);
-  ctx.fillRect(x - 5, y + 10, 10, 4);
+  ctx.fillRect(x - 9, y + 2, 18, 9);
+  ctx.fillRect(x - 6, y + 10, 12, 4);
   ctx.fillStyle = '#000';
   ctx.fillRect(x - 4, y + 5, 2, 2);
   ctx.fillRect(x + 3, y + 5, 2, 2);
+  ctx.fillStyle = '#5f3030';
+  ctx.fillRect(x - 7, y, 4, 3);
+  ctx.fillRect(x + 3, y, 4, 3);
   ctx.fillStyle = '#ff004d';
-  ctx.fillRect(x - 9, y + 18, 7, 5);
-  ctx.fillRect(x + 2, y + 18, 7, 5);
+  ctx.fillRect(x - 10, y + 18, 8, 5);
+  ctx.fillRect(x + 2, y + 18, 8, 5);
   ctx.fillStyle = '#ffec27';
-  ctx.fillRect(x - 2, y + 18, 4, 2);
+  ctx.fillRect(x - 3, y + 18, 6, 3);
+  ctx.fillStyle = '#5f3030';
+  ctx.font = `5px ${FONT}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('DK', x, y + 19);
 }
 
 function drawPauline(x, feet) {
@@ -564,26 +597,41 @@ function drawCharacter(player, now) {
   }
 }
 
-function drawBarrel(x, y, kind, now) {
+function drawBarrel(x, y, kind, now, direction = 1) {
   const fire = kind === 'firebarrel';
+  const roll = Math.floor(now / 75) * (direction || 1);
+  const stave = ((roll % 3) + 3) % 3;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 8, y + 7, 16, 2);
   if (fire) {
     const flicker = Math.floor(now / 90) % 2;
     ctx.fillStyle = '#ff004d';
-    ctx.fillRect(x - 5, y - 11 - flicker, 4, 5 + flicker);
-    ctx.fillRect(x + 2, y - 12 + flicker, 4, 6 - flicker);
+    ctx.fillRect(x - 6, y - 12 - flicker, 4, 6 + flicker);
+    ctx.fillRect(x + 2, y - 13 + flicker, 5, 7 - flicker);
     ctx.fillStyle = '#ffec27';
-    ctx.fillRect(x - 3, y - 8, 3, 3);
-    ctx.fillRect(x + 3, y - 9, 2, 3);
+    ctx.fillRect(x - 4, y - 9, 3, 4);
+    ctx.fillRect(x + 3, y - 10, 3, 4);
   }
-  ctx.fillStyle = fire ? '#d93600' : '#ab5236';
-  ctx.fillRect(x - 7, y - 7, 14, 14);
-  ctx.fillStyle = fire ? '#ffec27' : '#ffccaa';
-  ctx.fillRect(x - 7, y - 5, 14, 2);
-  ctx.fillRect(x - 7, y + 3, 14, 2);
-  ctx.fillStyle = fire ? '#ff7700' : '#5f3030';
-  ctx.fillRect(x - 1, y - 7, 2, 14);
-  ctx.fillStyle = fire ? '#fff1e8' : '#ffec27';
-  ctx.fillRect(x - 4, y - 1, 2, 2);
+  const wood = fire ? '#d93600' : '#ab5236';
+  const darkWood = fire ? '#7e2553' : '#5f3030';
+  const hoop = fire ? '#ffec27' : '#83769c';
+  // Silueta escalonada, tablones móviles y dos aros metálicos.
+  ctx.fillStyle = '#151020';
+  ctx.fillRect(x - 6, y - 9, 12, 2);
+  ctx.fillRect(x - 8, y - 7, 16, 14);
+  ctx.fillRect(x - 6, y + 7, 12, 2);
+  ctx.fillStyle = wood;
+  ctx.fillRect(x - 6, y - 7, 12, 14);
+  ctx.fillRect(x - 8, y - 5, 16, 10);
+  ctx.fillStyle = darkWood;
+  ctx.fillRect(x - 5 + stave, y - 6, 2, 12);
+  ctx.fillRect(x + 2 - stave, y - 6, 2, 12);
+  ctx.fillStyle = hoop;
+  ctx.fillRect(x - 8, y - 5, 16, 2);
+  ctx.fillRect(x - 8, y + 3, 16, 2);
+  ctx.fillStyle = fire ? '#fff1e8' : '#ffccaa';
+  ctx.fillRect(x - 6, y - 3, 2, 2);
+  ctx.fillRect(x + 4, y + 1, 2, 2);
 }
 
 function drawFireball(x, y, now) {
