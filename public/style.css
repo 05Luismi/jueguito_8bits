@@ -147,12 +147,17 @@ canvas {
   width: 100%;
 }
 
-.addr #addrList div {
-  color: var(--green);
+.addr #addrList a {
+  display: block;
+  color: var(--text);
   font-size: 13px;
   word-break: break-all;
   margin-top: 6px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
+.addr #addrList a:hover,
+.addr #addrList a:focus-visible { color: #fff; }
 
 #hostPanel { display: flex; flex-direction: column; gap: 10px; }
 #hostJoinForm { display: flex; gap: 8px; }
