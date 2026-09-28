@@ -292,33 +292,46 @@ function fillBackground(theme = null) {
   ctx.fillRect(0, H - 8, W, 8);
 }
 
+function floorYAt(level, floorIndex, x) {
+  return level.floors[floorIndex] + (level.slopes[floorIndex] || 0) * (x - W / 2);
+}
+
 function drawWorld(level) {
   fillBackground(level.theme);
   const floors = level.floors;
   for (let i = 0; i < floors.length; i++) {
-    const y = floors[i];
     ctx.fillStyle = level.theme.beam;
-    ctx.fillRect(16, y, W - 32, 5);
-    ctx.fillStyle = level.theme.trim;
-    ctx.fillRect(16, y, W - 32, 1);
-    ctx.fillStyle = '#151020';
-    for (let x = 20; x < W - 24; x += 18) {
-      ctx.fillRect(x, y + 5, 2, 4);
-      ctx.fillRect(x + 8, y + 5, 2, 4);
-      ctx.fillRect(x + 4, y + 8, 2, 3);
+    for (let x = 16; x < W - 16; x += 6) {
+      const y = Math.round(floorYAt(level, i, x));
+      ctx.fillRect(x, y, 7, 5);
+      ctx.fillStyle = level.theme.trim;
+      ctx.fillRect(x, y, 7, 1);
+      ctx.fillStyle = level.theme.beam;
+    }
+    ctx.strokeStyle = '#151020';
+    ctx.lineWidth = 2;
+    for (let x = 18; x < W - 36; x += 18) {
+      const y0 = floorYAt(level, i, x) + 5;
+      const y1 = floorYAt(level, i, x + 9) + 10;
+      const y2 = floorYAt(level, i, x + 18) + 5;
+      ctx.beginPath();
+      ctx.moveTo(x, y0);
+      ctx.lineTo(x + 9, y1);
+      ctx.lineTo(x + 18, y2);
+      ctx.stroke();
     }
   }
   for (let i = 0; i < level.ladders.length; i++) {
     const x = level.ladders[i];
-    const top = floors[i + 1] + 2;
-    const bottom = floors[i] - 1;
+    const top = floorYAt(level, i + 1, x) + 2;
+    const bottom = floorYAt(level, i, x) - 1;
     ctx.fillStyle = level.theme.ladder;
     ctx.fillRect(x - 5, top, 2, bottom - top);
     ctx.fillRect(x + 4, top, 2, bottom - top);
     for (let y = top + 2; y < bottom; y += 7) ctx.fillRect(x - 5, y, 11, 2);
   }
-  drawKong(52, floors[floors.length - 1]);
-  drawPauline(level.goalX, floors[floors.length - 1]);
+  drawKong(52, floorYAt(level, floors.length - 1, 52));
+  drawPauline(level.goalX, floorYAt(level, floors.length - 1, level.goalX));
   for (const hazard of curr.b) {
     if (hazard.kind === 'fireball') drawFireball(hazard.x, hazard.y, performance.now());
     else drawBarrel(hazard.x, hazard.y - 7, hazard.kind, performance.now());

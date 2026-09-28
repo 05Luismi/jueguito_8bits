@@ -34,11 +34,11 @@ const SUIT_COLORS = [
 // Suelos de cinco alturas y una escalera distinta entre cada pareja de niveles.
 // El extremo superior queda cerca de la meta, como en un juego arcade de plataformas.
 const LEVELS = [
-  { name: 'El puente', ladders: [365, 100, 350, 120], barrelMs: 3100, barrelSpeed: 1.05, theme: { bg: '#080b1b', beam: '#ff004d', trim: '#ff77a8', ladder: '#29adff' } },
-  { name: 'La fundición', ladders: [95, 370, 115, 365], barrelMs: 2700, barrelSpeed: 1.25, theme: { bg: '#1a100c', beam: '#ffa300', trim: '#ffccaa', ladder: '#ffec27' } },
-  { name: 'Las vigas', ladders: [345, 115, 370, 95], barrelMs: 2400, barrelSpeed: 1.42, theme: { bg: '#100d24', beam: '#c56cf0', trim: '#ff77a8', ladder: '#29adff' } },
-  { name: 'La torre', ladders: [110, 350, 100, 360], barrelMs: 2150, barrelSpeed: 1.58, theme: { bg: '#081a12', beam: '#00a844', trim: '#00e436', ladder: '#ffec27' } },
-  { name: 'El rescate final', ladders: [360, 95, 350, 110], barrelMs: 1950, barrelSpeed: 1.75, theme: { bg: '#120914', beam: '#ff004d', trim: '#ffec27', ladder: '#00e436' } },
+  { name: 'El puente', ladders: [365, 100, 350, 120], slopes: [0.04, -0.04, 0.04, -0.04, 0.04], barrelMs: 3100, barrelSpeed: 1.05, theme: { bg: '#080b1b', beam: '#ff004d', trim: '#ff77a8', ladder: '#29adff' } },
+  { name: 'La fundición', ladders: [95, 370, 115, 365], slopes: [-0.045, 0.045, -0.045, 0.045, -0.045], barrelMs: 2700, barrelSpeed: 1.25, theme: { bg: '#1a100c', beam: '#ffa300', trim: '#ffccaa', ladder: '#ffec27' } },
+  { name: 'Las vigas', ladders: [345, 115, 370, 95], slopes: [0.05, -0.05, 0.05, -0.05, 0.05], barrelMs: 2400, barrelSpeed: 1.42, theme: { bg: '#100d24', beam: '#c56cf0', trim: '#ff77a8', ladder: '#29adff' } },
+  { name: 'La torre', ladders: [110, 350, 100, 360], slopes: [-0.055, 0.055, -0.055, 0.055, -0.055], barrelMs: 2150, barrelSpeed: 1.58, theme: { bg: '#081a12', beam: '#00a844', trim: '#00e436', ladder: '#ffec27' } },
+  { name: 'El rescate final', ladders: [360, 95, 350, 110], slopes: [0.06, -0.06, 0.06, -0.06, 0.06], barrelMs: 1950, barrelSpeed: 1.75, theme: { bg: '#120914', beam: '#ff004d', trim: '#ffec27', ladder: '#00e436' } },
 ].map((level, i) => ({
   ...level,
   number: i + 1,
@@ -78,6 +78,9 @@ let endMessage = '';
 
 function setPhase(next) { phase = next; phaseStart = Date.now(); }
 function currentLevel() { return LEVELS[levelIndex]; }
+function floorYAt(level, floorIndex, x) {
+  return level.floors[floorIndex] + (level.slopes[floorIndex] || 0) * (x - WORLD_W / 2);
+}
 function cleanName(raw) {
   let name = String(raw || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, NAME_MAX) || 'Jugador';
   const taken = new Set([...players.values()].filter(p => p.joined).map(p => p.name.toLowerCase()));
@@ -91,7 +94,8 @@ function selectedColor(raw) { return SUIT_COLORS.find(c => c.hex === raw) || SUI
 
 function resetPlayerForLevel(p) {
   p.x = 34;
-  p.y = currentLevel().floors[0];
+  p.floor = 0;
+  p.y = floorYAt(currentLevel(), p.floor, p.x);
   p.vy = 0;
   p.onGround = true;
   p.climbing = false;
@@ -158,7 +162,7 @@ function spawnBarrel(now) {
     id: `${levelIndex}-${now}-${Math.random()}`,
     kind,
     x: 455,
-    y: level.floors[level.floors.length - 1],
+    y: floorYAt(level, level.floors.length - 1, 455),
     floor: level.floors.length - 1,
     dir: -1,
     speed: level.barrelSpeed + Math.random() * 0.3 + (kind === 'firebarrel' ? 0.45 : 0),
@@ -175,7 +179,7 @@ function spawnFireball(now) {
     id: `fire-${levelIndex}-${now}-${Math.random()}`,
     kind: 'fireball',
     x: dir < 0 ? WORLD_W - 22 : 22,
-    y: level.floors[floor],
+    y: floorYAt(level, floor, dir < 0 ? WORLD_W - 22 : 22),
     floor,
     dir,
     speed: 1.15 + levelIndex * 0.18 + Math.random() * 0.35,
@@ -187,10 +191,12 @@ function spawnFireball(now) {
 
 function findLadder(level, p) {
   for (let i = 0; i < level.ladders.length; i++) {
-    const top = level.floors[i + 1];
-    const bottom = level.floors[i];
     const x = level.ladders[i];
-    if (Math.abs(p.x - x) < 13 && p.y >= top - 5 && p.y <= bottom + 5) return { x, top, bottom };
+    const top = floorYAt(level, i + 1, x);
+    const bottom = floorYAt(level, i, x);
+    if (Math.abs(p.x - x) < 13 && p.y >= top - 5 && p.y <= bottom + 5) {
+      return { x, top, bottom, topFloor: i + 1, bottomFloor: i };
+    }
   }
   return null;
 }
@@ -205,29 +211,39 @@ function updatePlayer(p, level) {
     p.x = ladder.x;
     p.vy = 0;
     p.y += (p.input.d ? 1 : -1) * 1.75;
-    if (p.y <= ladder.top) { p.y = ladder.top; p.climbing = false; p.onGround = true; }
-    if (p.y >= ladder.bottom) { p.y = ladder.bottom; p.climbing = false; p.onGround = true; }
+    if (p.y <= ladder.top) {
+      p.y = ladder.top; p.floor = ladder.topFloor; p.climbing = false; p.onGround = true;
+    }
+    if (p.y >= ladder.bottom) {
+      p.y = ladder.bottom; p.floor = ladder.bottomFloor; p.climbing = false; p.onGround = true;
+    }
   } else {
     p.climbing = false;
     const move = (p.input.r ? 1 : 0) - (p.input.l ? 1 : 0);
     p.x = Math.max(20, Math.min(WORLD_W - 20, p.x + move * 2.25));
-    p.vy = Math.min(6, p.vy + 0.28);
-    p.y += p.vy;
-    p.onGround = false;
-    if (p.vy >= 0) {
-      for (const floorY of level.floors) {
-        if (oldY <= floorY && p.y >= floorY) {
-          p.y = floorY;
-          p.vy = 0;
-          p.onGround = true;
-          break;
+    if (p.onGround && p.vy === 0) {
+      p.y = floorYAt(level, p.floor, p.x);
+    } else {
+      p.vy = Math.min(6, p.vy + 0.28);
+      const nextY = p.y + p.vy;
+      p.onGround = false;
+      if (p.vy >= 0) {
+        for (let i = level.floors.length - 1; i >= 0; i--) {
+          const surface = floorYAt(level, i, p.x);
+          if (oldY <= surface && nextY >= surface) {
+            p.y = surface;
+            p.floor = i;
+            p.vy = 0;
+            p.onGround = true;
+            break;
+          }
         }
       }
-    } else p.onGround = false;
+      if (!p.onGround) p.y = nextY;
+    }
   }
   if (p.y > WORLD_H + 16) playerHit(p, 'caída');
-  const topFloor = level.floors[level.floors.length - 1];
-  if (p.onGround && Math.abs(p.y - topFloor) < 1 && p.x >= level.goalX - 20) {
+  if (p.onGround && p.floor === level.floors.length - 1 && p.x >= level.goalX - 20) {
     p.reachedGoal = true;
     events.push({ k: 'goal', id: p.id, n: p.name });
   }
@@ -268,13 +284,13 @@ function update() {
     if (b.kind === 'fireball') {
       b.x += b.dir * b.speed;
       if (b.x < 18 || b.x > WORLD_W - 18) b.dir *= -1;
-      b.y = level.floors[b.floor] - 7 - Math.abs(Math.sin(now / 175 + b.phase)) * 7;
+      b.y = floorYAt(level, b.floor, b.x) - 7 - Math.abs(Math.sin(now / 175 + b.phase)) * 7;
     } else {
       b.x += b.dir * b.speed;
       if (b.x < 18 || b.x > WORLD_W - 18) {
         if (b.floor > 0) {
           b.floor--;
-          b.y = level.floors[b.floor];
+          b.y = floorYAt(level, b.floor, b.x);
           b.dir *= -1;
         } else b.remove = true;
       }
@@ -389,7 +405,7 @@ wss.on('connection', (ws, req) => {
         break;
       case 'jump':
         if (phase === 'playing' && p.alive && p.inGame && (p.onGround || p.climbing)) {
-          p.vy = -5.7;
+          p.vy = -3.3;
           p.onGround = false;
           p.climbing = false;
         }
