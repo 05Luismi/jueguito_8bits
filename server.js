@@ -74,6 +74,7 @@ let levelIndex = 0;
 let nextId = 1;
 let nextBarrelAt = 0;
 let nextFireballAt = 0;
+let kongThrowUntil = 0;
 let endMessage = '';
 
 function setPhase(next) { phase = next; phaseStart = Date.now(); }
@@ -161,12 +162,14 @@ function spawnBarrel(now) {
   hazards.push({
     id: `${levelIndex}-${now}-${Math.random()}`,
     kind,
-    x: 455,
-    y: floorYAt(level, level.floors.length - 1, 455),
+    // Donkey Kong lanza los barriles desde la izquierda, en la viga superior.
+    x: 67,
+    y: floorYAt(level, level.floors.length - 1, 67),
     floor: level.floors.length - 1,
-    dir: -1,
-    speed: level.barrelSpeed + Math.random() * 0.3 + (kind === 'firebarrel' ? 0.45 : 0),
+    dir: 1,
+    speed: level.barrelSpeed * 1.18 + Math.random() * 0.3 + (kind === 'firebarrel' ? 0.45 : 0),
   });
+  kongThrowUntil = now + 420;
   nextBarrelAt = now + level.barrelMs;
   events.push({ k: kind });
 }
@@ -342,6 +345,7 @@ function snapshot() {
       inv: now < p.invulnerableUntil,
     })),
     b: hazards.map(b => ({ x: Math.round(b.x), y: Math.round(b.y), floor: b.floor, kind: b.kind })),
+    kt: now < kongThrowUntil,
     e: events,
   });
 }
@@ -405,7 +409,7 @@ wss.on('connection', (ws, req) => {
         break;
       case 'jump':
         if (phase === 'playing' && p.alive && p.inGame && (p.onGround || p.climbing)) {
-          p.vy = -3.3;
+          p.vy = -3.7;
           p.onGround = false;
           p.climbing = false;
         }

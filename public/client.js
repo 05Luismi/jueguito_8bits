@@ -330,7 +330,7 @@ function drawWorld(level) {
     ctx.fillRect(x + 4, top, 2, bottom - top);
     for (let y = top + 2; y < bottom; y += 7) ctx.fillRect(x - 5, y, 11, 2);
   }
-  drawKong(52, floorYAt(level, floors.length - 1, 52));
+  drawKong(52, floorYAt(level, floors.length - 1, 52), curr.kt);
   drawPauline(level.goalX, floorYAt(level, floors.length - 1, level.goalX));
   for (const hazard of curr.b) {
     if (hazard.kind === 'fireball') drawFireball(hazard.x, hazard.y, performance.now());
@@ -338,12 +338,16 @@ function drawWorld(level) {
   }
 }
 
-function drawKong(x, feet) {
+function drawKong(x, feet, throwing = false) {
   const y = feet - 25;
   ctx.fillStyle = '#ab5236';
   ctx.fillRect(x - 11, y + 7, 22, 14);
   ctx.fillRect(x - 15, y + 10, 5, 9);
-  ctx.fillRect(x + 10, y + 10, 5, 9);
+  ctx.fillRect(x + 10, throwing ? y + 5 : y + 10, 5, throwing ? 12 : 9);
+  if (throwing) {
+    ctx.fillStyle = '#ffccaa';
+    ctx.fillRect(x + 14, y + 4, 4, 4);
+  }
   ctx.fillStyle = '#ffccaa';
   ctx.fillRect(x - 8, y + 2, 16, 9);
   ctx.fillRect(x - 5, y + 10, 10, 4);
