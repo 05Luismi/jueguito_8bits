@@ -131,6 +131,7 @@ function startGame() {
     p.alive = true;
     p.inGame = true;
     p.k = 0;
+    p.score = 0;
     resetPlayerForLevel(p);
   }
   beginLevel();
@@ -265,6 +266,7 @@ function updatePlayer(p, level) {
   if (p.onGround && p.floor === level.floors.length - 1 && p.x >= level.goalX - 20) {
     if (levelIndex < LEVELS.length - 1) {
       p.reachedGoal = true;
+      p.score += 1000;
       events.push({ k: 'goal', id: p.id, n: p.name });
     }
   }
@@ -345,6 +347,7 @@ function update() {
       if (now < p.hammerUntil && Math.abs(p.x - b.x) < 27 && Math.abs(p.y - b.y) < 20) {
         b.remove = true;
         p.k++;
+        p.score += 100;
         events.push({ k: 'smash', id: p.id });
         break;
       }
@@ -364,6 +367,7 @@ function update() {
     if (attacker) {
       kongHealth--;
       kongHitUntil = now + 1100;
+      attacker.score += 500;
       events.push({ k: 'bossHit', id: attacker.id, hp: kongHealth });
       if (kongHealth === 0) {
         endMessage = '¡DONKEY KONG DERROTADO! PAULINE ES LIBRE';
@@ -402,7 +406,7 @@ function snapshot() {
     p: [...players.values()].filter(p => p.joined).map(p => ({
       id: p.id, n: p.name, ch: p.character, c: p.color,
       x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10,
-      lives: p.lives, al: p.alive, ig: p.inGame, goal: p.reachedGoal,
+      lives: p.lives, score: p.score || 0, al: p.alive, ig: p.inGame, goal: p.reachedGoal,
       cl: p.climbing, hm: now < p.hammerUntil, hcd: Math.max(0, p.hammerReadyAt - now), k: p.k,
       inv: now < p.invulnerableUntil,
     })),
@@ -443,7 +447,7 @@ wss.on('connection', (ws, req) => {
     id: nextId++, ws, name: '', character: CHARACTERS[0], color: SUIT_COLORS[0].hex,
     joined: false, isHost, x: 34, y: 288, vy: 0, onGround: true, climbing: false,
     lives: 0, alive: false, inGame: false, reachedGoal: false, hammerUntil: 0,
-    hammerReadyAt: 0, invulnerableUntil: 0, k: 0,
+    hammerReadyAt: 0, invulnerableUntil: 0, k: 0, score: 0,
     input: { u: false, d: false, l: false, r: false },
   };
   players.set(p.id, p);

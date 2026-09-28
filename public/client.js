@@ -696,9 +696,12 @@ function drawOverlay(player) {
   } else {
     drawText(`NIVEL ${curr.level}/5: ${curr.levelName.toUpperCase()}`, 8, 12, 7, '#ffec27', 'left');
     drawText('ESPACIO SALTA · X MAZO', W - 8, 12, 6, '#fff1e8', 'right');
+    const highScore = Math.max(0, ...curr.p.map(p => p.score || 0));
+    drawText(`1UP ${String(player ? player.score || 0 : 0).padStart(6, '0')}`, 8, 25, 5, '#fff1e8', 'left');
+    drawText(`HIGH SCORE ${String(highScore).padStart(6, '0')}`, W / 2, 25, 5, '#fff1e8');
     if (curr.level === 5) {
-      drawText(`JEFE: DONKEY KONG  ${'♥'.repeat(Math.max(0, curr.boss || 0))}`, W / 2, 27, 7, '#ff004d');
-      drawText('SUBE A LA VIGA SUPERIOR Y PULSA X JUNTO A KONG', W / 2, 39, 5, '#ffec27');
+      drawText(`JEFE: DONKEY KONG  ${'♥'.repeat(Math.max(0, curr.boss || 0))}`, W / 2, 38, 7, '#ff004d');
+      drawText('SUBE A LA VIGA SUPERIOR Y PULSA X JUNTO A KONG', W / 2, 49, 5, '#ffec27');
     }
     if (player && !player.al) {
       ctx.fillStyle = 'rgba(0,0,0,.5)';
