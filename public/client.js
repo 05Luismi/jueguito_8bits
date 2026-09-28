@@ -186,6 +186,10 @@ function onState(state) {
 function handleEvent(event) {
   if (event.k === 'hit') beep(event.id === myId ? 150 : 240, 0.12, 'sawtooth');
   if (event.k === 'hammer' || event.k === 'smash') beep(330, 0.1);
+  if (event.k === 'bossHit') {
+    beep(175 + (3 - event.hp) * 90, 0.18, 'square');
+    if (event.id === myId) addFeed(`¡Golpe al jefe! ${event.hp} impactos restantes`);
+  }
   if (event.k === 'fireball' || event.k === 'firebarrel') beep(125, 0.16, 'sawtooth');
   if (event.k === 'level') beep(700, 0.13);
   if (event.k === 'goal') addFeed(`${event.n} llegó a la meta`);
@@ -337,7 +341,7 @@ function drawWorld(level) {
   const paulineFeet = floorYAt(level, topFloor, paulineX) - 30;
   drawRescuePlatform(18, 91, kongFeet, level.theme);
   drawRescuePlatform(379, 462, paulineFeet, level.theme);
-  drawKong(kongX, kongFeet, curr.kt, performance.now());
+  drawKong(kongX, kongFeet, curr.kt, performance.now(), curr.bossHit);
   drawPauline(paulineX, paulineFeet);
   for (const hazard of curr.b) {
     if (hazard.kind === 'fireball') drawFireball(hazard.x, hazard.y, performance.now());
@@ -362,10 +366,10 @@ function drawRescuePlatform(left, right, feet, theme) {
   ctx.fillRect(right - 6, y + 6, 3, 5);
 }
 
-function drawKong(x, feet, throwing = false, now = 0) {
+function drawKong(x, feet, throwing = false, now = 0, damaged = false) {
   const step = Math.floor(now / 120) % 2;
-  const y = feet - 25 + (throwing ? -1 : 0);
-  ctx.fillStyle = '#ab5236';
+  const y = feet - 25 + (throwing ? -1 : 0) + (damaged ? (Math.floor(now / 70) % 2 ? -2 : 2) : 0);
+  ctx.fillStyle = damaged ? '#fff1e8' : '#ab5236';
   ctx.fillRect(x - 12, y + 8, 24, 13);
   ctx.fillRect(x - 15, y + 10 + step, 5, 9 - step);
   ctx.fillRect(x + 10, throwing ? y + 4 : y + 10 - step, 5, throwing ? 12 : 9 + step);
@@ -583,12 +587,17 @@ function drawCharacter(player, now) {
     ctx.fillRect(x + 2, top + 8, 5, 3);
   }
   if (player.hm) {
+    const swing = Math.floor(now / 80) % 2;
     ctx.fillStyle = '#ffccaa';
-    ctx.fillRect(x + 7, top + 8, 2, 9);
+    ctx.fillRect(x + 7, top + 7, 3, 11);
+    ctx.fillStyle = '#5f3030';
+    ctx.fillRect(x + 8 + swing, top + 1, 3, 9);
     ctx.fillStyle = '#83769c';
-    ctx.fillRect(x + 5, top + 5, 7, 4);
+    ctx.fillRect(x + 4 + swing, top - 2, 11, 5);
     ctx.fillStyle = '#c2c3c7';
-    ctx.fillRect(x + 4, top + 4, 9, 2);
+    ctx.fillRect(x + 5 + swing, top - 3, 9, 2);
+    ctx.fillStyle = '#fff1e8';
+    ctx.fillRect(x + 6 + swing, top - 2, 3, 1);
   }
   if (player.goal) {
     ctx.fillStyle = '#ffec27';
@@ -668,7 +677,7 @@ function drawOverlay(player) {
     drawText('8 BITS KONG', W / 2, 100, 22, '#ffec27');
     drawText(`${curr.p.length} JUGADOR${curr.p.length === 1 ? '' : 'ES'} CONECTADO${curr.p.length === 1 ? '' : 'S'}`, W / 2, 145, 8, '#29adff');
     drawText(isHost ? 'EL PROFESOR PUEDE EMPEZAR' : 'ESPERANDO AL PROFESOR...', W / 2, 188, 8, blink ? '#00e436' : '#fff1e8');
-    drawText('5 NIVELES · 5 VIDAS · ¡LLEGA A PAULINE!', W / 2, 232, 6, '#ff77a8');
+    drawText('5 NIVELES · 5 VIDAS · ¡DERROTA A KONG!', W / 2, 232, 6, '#ff77a8');
   } else if (phase === 'countdown') {
     ctx.fillStyle = 'rgba(0,0,0,.42)';
     ctx.fillRect(0, 0, W, H);
@@ -687,6 +696,10 @@ function drawOverlay(player) {
   } else {
     drawText(`NIVEL ${curr.level}/5: ${curr.levelName.toUpperCase()}`, 8, 12, 7, '#ffec27', 'left');
     drawText('ESPACIO SALTA · X MAZO', W - 8, 12, 6, '#fff1e8', 'right');
+    if (curr.level === 5) {
+      drawText(`JEFE: DONKEY KONG  ${'♥'.repeat(Math.max(0, curr.boss || 0))}`, W / 2, 27, 7, '#ff004d');
+      drawText('SUBE A LA VIGA SUPERIOR Y PULSA X JUNTO A KONG', W / 2, 39, 5, '#ffec27');
+    }
     if (player && !player.al) {
       ctx.fillStyle = 'rgba(0,0,0,.5)';
       ctx.fillRect(90, 135, W - 180, 52);

@@ -36,3 +36,4 @@ No basta con hacer otro push para sustituir el servidor de juego de Vercel: las 
 - Cinco colores de traje para cada personaje.
 - Cada personaje tiene accesorios pixelados propios, además del color de traje elegido.
 - El equipo avanza cuando quienes siguen en la partida alcanzan la meta.
+- Algunos barriles bajan por las escaleras; en el quinto nivel, acercaos a Donkey Kong y pulsad **X** para golpearlo tres veces y rescatar a Pauline.

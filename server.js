@@ -77,6 +77,8 @@ let nextId = 1;
 let nextBarrelAt = 0;
 let nextFireballAt = 0;
 let kongThrowUntil = 0;
+let kongHealth = 3;
+let kongHitUntil = 0;
 let endMessage = '';
 
 function setPhase(next) { phase = next; phaseStart = Date.now(); }
@@ -111,6 +113,8 @@ function resetPlayerForLevel(p) {
 
 function beginLevel() {
   hazards = [];
+  kongHealth = 3;
+  kongHitUntil = 0;
   nextBarrelAt = Date.now() + 1500;
   nextFireballAt = Date.now() + 5000;
   for (const p of players.values()) if (p.joined && p.alive) resetPlayerForLevel(p);
@@ -259,8 +263,10 @@ function updatePlayer(p, level) {
   }
   if (p.y > WORLD_H + 16) playerHit(p, 'caída');
   if (p.onGround && p.floor === level.floors.length - 1 && p.x >= level.goalX - 20) {
-    p.reachedGoal = true;
-    events.push({ k: 'goal', id: p.id, n: p.name });
+    if (levelIndex < LEVELS.length - 1) {
+      p.reachedGoal = true;
+      events.push({ k: 'goal', id: p.id, n: p.name });
+    }
   }
 }
 
@@ -309,8 +315,19 @@ function update() {
           b.nextDir = undefined;
         }
       } else {
+        const previousX = b.x;
         b.x += b.dir * b.speed;
-        if (b.x < 18 || b.x > WORLD_W - 18) {
+        const ladderX = b.floor > 0 ? level.ladders[b.floor - 1] : undefined;
+        const crossedLadder = ladderX !== undefined && (b.dir > 0
+          ? previousX < ladderX && b.x >= ladderX
+          : previousX > ladderX && b.x <= ladderX);
+        if (crossedLadder && Math.random() < 0.3) {
+          b.x = ladderX;
+          b.floor--;
+          b.falling = true;
+          b.nextDir = b.dir;
+          b.dropTarget = floorYAt(level, b.floor, b.x);
+        } else if (b.x < 18 || b.x > WORLD_W - 18) {
           if (b.floor > 0) {
             b.x = Math.max(18, Math.min(WORLD_W - 18, b.x));
             b.floor--;
@@ -339,12 +356,30 @@ function update() {
   }
   hazards = hazards.filter(b => !b.remove);
 
+  if (levelIndex === LEVELS.length - 1 && kongHealth > 0 && now >= kongHitUntil) {
+    const topFloor = level.floors.length - 1;
+    const kongFloorY = floorYAt(level, topFloor, 52);
+    const attacker = active.find(p => now < p.hammerUntil && p.floor === topFloor &&
+      Math.abs(p.x - 52) < 28 && Math.abs(p.y - kongFloorY) < 12);
+    if (attacker) {
+      kongHealth--;
+      kongHitUntil = now + 1100;
+      events.push({ k: 'bossHit', id: attacker.id, hp: kongHealth });
+      if (kongHealth === 0) {
+        endMessage = '¡DONKEY KONG DERROTADO! PAULINE ES LIBRE';
+        setPhase('ended');
+        events.push({ k: 'win' });
+      }
+    }
+  }
+  if (phase !== 'playing') return;
+
   const alive = [...players.values()].filter(p => p.joined && p.inGame && p.alive);
   if (!alive.length) {
     endMessage = '¡FIN DE LA PARTIDA!';
     setPhase('ended');
     events.push({ k: 'lose' });
-  } else if (alive.every(p => p.reachedGoal)) {
+  } else if (levelIndex < LEVELS.length - 1 && alive.every(p => p.reachedGoal)) {
     if (levelIndex === LEVELS.length - 1) {
       endMessage = '¡RESCATE COMPLETADO!';
       setPhase('ended');
@@ -362,6 +397,8 @@ function snapshot() {
     level: levelIndex + 1, levelName: level.name, levelData: level,
     intermission: phase === 'intermission' ? Math.max(0, INTERMISSION_MS - (now - phaseStart)) : 0,
     end: endMessage,
+    boss: levelIndex === LEVELS.length - 1 ? kongHealth : 0,
+    bossHit: now < kongHitUntil,
     p: [...players.values()].filter(p => p.joined).map(p => ({
       id: p.id, n: p.name, ch: p.character, c: p.color,
       x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10,
