@@ -43,6 +43,12 @@ const LEVELS = [
   { name: 'El rescate final', ladders: [360, 95, 350, 110], slopes: [0.06, -0.06, 0.06, -0.06, 0.06], barrelMs: 1950, barrelSpeed: 1.75, theme: { bg: '#120914', beam: '#ff004d', trim: '#ffec27', ladder: '#00e436' } },
 ].map((level, i) => ({
   ...level,
+  barrelMs: Math.max(1350, level.barrelMs - i * 140),
+  barrelSpeed: level.barrelSpeed * (1 + i * 0.08),
+  firebarrelChance: 0.12 + i * 0.08,
+  barrelLadderChance: 0.18 + i * 0.08,
+  maxFireballs: Math.min(5, 2 + i),
+  hammerSpawns: [[1, 225], [3, 255]],
   number: i + 1,
   floors: [288, 238, 188, 138, 88],
   goalX: 425,
@@ -79,6 +85,7 @@ let nextFireballAt = 0;
 let kongThrowUntil = 0;
 let kongHealth = 3;
 let kongHitUntil = 0;
+let hammerPickups = [];
 let endMessage = '';
 
 function setPhase(next) { phase = next; phaseStart = Date.now(); }
@@ -113,6 +120,8 @@ function resetPlayerForLevel(p) {
 
 function beginLevel() {
   hazards = [];
+  const level = currentLevel();
+  hammerPickups = level.hammerSpawns.map(([floor, x], id) => ({ id, floor, x, y: floorYAt(level, floor, x), taken: false }));
   kongHealth = 3;
   kongHitUntil = 0;
   nextBarrelAt = Date.now() + 1500;
@@ -170,7 +179,7 @@ function spawnBarrel(now) {
     nextBarrelAt = now + level.barrelMs;
     return;
   }
-  const kind = levelIndex > 0 && Math.random() < 0.32 ? 'firebarrel' : 'barrel';
+  const kind = Math.random() < level.firebarrelChance ? 'firebarrel' : 'barrel';
   hazards.push({
     id: `${levelIndex}-${now}-${Math.random()}`,
     kind,
@@ -188,8 +197,8 @@ function spawnBarrel(now) {
 
 function spawnFireball(now) {
   const level = currentLevel();
-  const cooldown = Math.max(4300, 8000 - levelIndex * 700);
-  if (hazards.filter(h => h.kind === 'fireball').length >= MAX_FIREBALLS) {
+  const cooldown = Math.max(3000, 7600 - levelIndex * 900);
+  if (hazards.filter(h => h.kind === 'fireball').length >= (level.maxFireballs || MAX_FIREBALLS)) {
     nextFireballAt = now + cooldown;
     return;
   }
@@ -263,7 +272,9 @@ function updatePlayer(p, level) {
     }
   }
   if (p.y > WORLD_H + 16) playerHit(p, 'caída');
-  if (p.onGround && p.floor === level.floors.length - 1 && p.x >= level.goalX - 20) {
+  const platformLeft = level.goalX - 46;
+  const platformRight = level.goalX + 37;
+  if (p.onGround && p.floor === level.floors.length - 1 && p.x + 8 >= platformLeft && p.x - 8 <= platformRight) {
     if (levelIndex < LEVELS.length - 1) {
       p.reachedGoal = true;
       p.score += 1000;
@@ -301,6 +312,17 @@ function update() {
   const active = [...players.values()].filter(p => p.joined && p.inGame && p.alive);
   for (const p of active) updatePlayer(p, level);
 
+  for (const pickup of hammerPickups) {
+    if (pickup.taken) continue;
+    const collector = active.find(p => p.onGround && p.floor === pickup.floor && Math.abs(p.x - pickup.x) < 12);
+    if (collector) {
+      pickup.taken = true;
+      collector.hammerReadyAt = Math.min(collector.hammerReadyAt, now);
+      collector.score += 250;
+      events.push({ k: 'hammerPickup', id: collector.id });
+    }
+  }
+
   if (now >= nextBarrelAt) spawnBarrel(now);
   if (now >= nextFireballAt) spawnFireball(now);
   for (const b of hazards) {
@@ -323,7 +345,7 @@ function update() {
         const crossedLadder = ladderX !== undefined && (b.dir > 0
           ? previousX < ladderX && b.x >= ladderX
           : previousX > ladderX && b.x <= ladderX);
-        if (crossedLadder && Math.random() < 0.3) {
+        if (crossedLadder && Math.random() < level.barrelLadderChance) {
           b.x = ladderX;
           b.floor--;
           b.falling = true;
@@ -383,7 +405,7 @@ function update() {
     endMessage = '¡FIN DE LA PARTIDA!';
     setPhase('ended');
     events.push({ k: 'lose' });
-  } else if (levelIndex < LEVELS.length - 1 && alive.every(p => p.reachedGoal)) {
+  } else if (levelIndex < LEVELS.length - 1 && alive.some(p => p.reachedGoal)) {
     if (levelIndex === LEVELS.length - 1) {
       endMessage = '¡RESCATE COMPLETADO!';
       setPhase('ended');
@@ -406,11 +428,12 @@ function snapshot() {
     p: [...players.values()].filter(p => p.joined).map(p => ({
       id: p.id, n: p.name, ch: p.character, c: p.color,
       x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10,
-      lives: p.lives, score: p.score || 0, al: p.alive, ig: p.inGame, goal: p.reachedGoal,
+      floor: p.floor, lives: p.lives, score: p.score || 0, al: p.alive, ig: p.inGame, goal: p.reachedGoal,
       cl: p.climbing, hm: now < p.hammerUntil, hcd: Math.max(0, p.hammerReadyAt - now), k: p.k,
       inv: now < p.invulnerableUntil,
     })),
     b: hazards.map(b => ({ x: Math.round(b.x), y: Math.round(b.y), floor: b.floor, kind: b.kind, d: b.dir })),
+    h: hammerPickups.filter(h => !h.taken).map(h => ({ x: h.x, y: h.y, floor: h.floor })),
     kt: now < kongThrowUntil,
     e: events,
   });

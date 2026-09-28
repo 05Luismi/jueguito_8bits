@@ -180,7 +180,10 @@ function onState(state) {
   updateHud();
   updateSide();
   if (state.ph === 'countdown' && oldPhase !== 'countdown') beep(520);
-  if (state.ph === 'ended' && oldPhase !== 'ended') beep(state.end.includes('COMPLETADO') ? 880 : 180, 0.24);
+  if (state.ph === 'ended' && oldPhase !== 'ended') {
+    const victory = /COMPLETADO|DERROTADO|LIBRE/.test(state.end);
+    beep(victory ? 880 : 180, 0.24);
+  }
 }
 
 function handleEvent(event) {
@@ -189,6 +192,10 @@ function handleEvent(event) {
   if (event.k === 'bossHit') {
     beep(175 + (3 - event.hp) * 90, 0.18, 'square');
     if (event.id === myId) addFeed(`¡Golpe al jefe! ${event.hp} impactos restantes`);
+  }
+  if (event.k === 'hammerPickup') {
+    beep(620, 0.12, 'square');
+    if (event.id === myId) addFeed('¡Mazo recargado!');
   }
   if (event.k === 'fireball' || event.k === 'firebarrel') beep(125, 0.16, 'sawtooth');
   if (event.k === 'level') beep(700, 0.13);
@@ -215,7 +222,7 @@ function updateHud() {
 function updateSide() {
   if (!curr) return;
   const people = [...curr.p].sort((a, b) => Number(b.al) - Number(a.al) || a.n.localeCompare(b.n));
-  const key = people.map(p => `${p.id}|${p.n}|${p.ch}|${p.lives}|${p.al}|${p.goal}`).join(';') + curr.ph;
+  const key = people.map(p => `${p.id}|${p.n}|${p.ch}|${p.lives}|${p.al}|${p.goal}|${p.floor}|${Math.floor((p.x || 0) / 20)}`).join(';') + curr.ph;
   if (key === lastListKey) return;
   lastListKey = key;
   const active = curr.p.filter(p => p.ig && p.al).length;
@@ -233,7 +240,8 @@ function updateSide() {
     dot.style.background = player.c;
     name.append(dot, `${player.n} · ${player.ch}`);
     const status = document.createElement('span');
-    status.textContent = player.ig ? (player.al ? (player.goal ? 'META' : `${player.lives}♥`) : 'FUERA') : 'LISTO';
+    status.className = 'pstatus';
+    status.textContent = player.ig ? (player.al ? (player.goal ? 'META' : `N${(player.floor || 0) + 1} ${Math.round((player.x / W) * 100)}% · ${player.lives}♥`) : 'FUERA') : 'LISTO';
     row.append(name, status);
     list.appendChild(row);
   }
@@ -304,25 +312,36 @@ function drawWorld(level) {
   fillBackground(level.theme);
   const floors = level.floors;
   for (let i = 0; i < floors.length; i++) {
-    ctx.fillStyle = level.theme.beam;
-    for (let x = 16; x < W - 16; x += 6) {
+    for (let x = 14; x < W - 14; x += 9) {
       const y = Math.round(floorYAt(level, i, x));
-      ctx.fillRect(x, y, 7, 5);
-      ctx.fillStyle = level.theme.trim;
-      ctx.fillRect(x, y, 7, 1);
+      ctx.fillStyle = '#050711';
+      ctx.fillRect(x, y - 1, 10, 9);
       ctx.fillStyle = level.theme.beam;
+      ctx.fillRect(x + 1, y, 8, 5);
+      ctx.fillStyle = level.theme.trim;
+      ctx.fillRect(x + 1, y, 8, 1);
+      ctx.fillStyle = '#7e2553';
+      ctx.fillRect(x + 1, y + 5, 8, 2);
+      if ((x - 14) % 27 < 9) {
+        ctx.fillStyle = '#fff1e8';
+        ctx.fillRect(x + 3, y + 2, 1, 1);
+        ctx.fillStyle = '#151020';
+        ctx.fillRect(x + 6, y + 2, 1, 2);
+      }
     }
     ctx.strokeStyle = '#151020';
-    ctx.lineWidth = 2;
-    for (let x = 18; x < W - 36; x += 18) {
-      const y0 = floorYAt(level, i, x) + 5;
-      const y1 = floorYAt(level, i, x + 9) + 10;
-      const y2 = floorYAt(level, i, x + 18) + 5;
+    ctx.lineWidth = 1.5;
+    for (let x = 20; x < W - 38; x += 26) {
+      const y0 = Math.round(floorYAt(level, i, x) + 6);
+      const y1 = Math.round(floorYAt(level, i, x + 13) + 12);
+      const y2 = Math.round(floorYAt(level, i, x + 26) + 6);
       ctx.beginPath();
       ctx.moveTo(x, y0);
-      ctx.lineTo(x + 9, y1);
-      ctx.lineTo(x + 18, y2);
+      ctx.lineTo(x + 13, y1);
+      ctx.lineTo(x + 26, y2);
       ctx.stroke();
+      ctx.fillStyle = level.theme.trim;
+      ctx.fillRect(x + 12, y1, 2, 2);
     }
   }
   for (let i = 0; i < level.ladders.length; i++) {
@@ -337,33 +356,54 @@ function drawWorld(level) {
   const topFloor = floors.length - 1;
   const kongX = 52;
   const paulineX = level.goalX;
-  const kongFeet = floorYAt(level, topFloor, kongX) - 30;
-  const paulineFeet = floorYAt(level, topFloor, paulineX) - 30;
+  const kongFeet = floorYAt(level, topFloor, kongX) - 25;
+  const paulineFeet = floorYAt(level, topFloor, paulineX) - 25;
   drawRescuePlatform(18, 91, kongFeet, level.theme);
   drawRescuePlatform(379, 462, paulineFeet, level.theme);
   drawKong(kongX, kongFeet, curr.kt, performance.now(), curr.bossHit);
   drawPauline(paulineX, paulineFeet);
+  for (const hammer of curr.h || []) drawHammerPickup(hammer.x, hammer.y, performance.now());
   for (const hazard of curr.b) {
-    if (hazard.kind === 'fireball') drawFireball(hazard.x, hazard.y, performance.now());
+    if (hazard.kind === 'fireball') drawFireball(hazard.x, hazard.y, performance.now(), hazard.d);
     else drawBarrel(hazard.x, hazard.y - 7, hazard.kind, performance.now(), hazard.d);
   }
 }
 
 function drawRescuePlatform(left, right, feet, theme) {
   const y = Math.round(feet);
-  ctx.fillStyle = '#151020';
-  ctx.fillRect(left - 2, y + 5, right - left + 4, 3);
+  ctx.fillStyle = '#080b1b';
+  ctx.fillRect(left - 2, y - 2, right - left + 4, 11);
   ctx.fillStyle = theme.beam;
-  ctx.fillRect(left, y, right - left, 5);
+  ctx.fillRect(left, y, right - left, 6);
   ctx.fillStyle = theme.trim;
   ctx.fillRect(left, y, right - left, 2);
   ctx.fillStyle = '#151020';
-  for (let x = left + 7; x < right - 4; x += 13) {
-    ctx.fillRect(x, y + 3, 2, 2);
+  for (let x = left + 10; x < right - 6; x += 18) {
+    ctx.fillRect(x, y + 3, 2, 3);
+    ctx.fillRect(x + 5, y + 3, 2, 3);
   }
   ctx.fillStyle = theme.beam;
-  ctx.fillRect(left + 3, y + 6, 3, 5);
-  ctx.fillRect(right - 6, y + 6, 3, 5);
+  ctx.fillRect(left + 3, y + 7, 5, 5);
+  ctx.fillRect(right - 8, y + 7, 5, 5);
+  ctx.fillStyle = theme.trim;
+  ctx.fillRect(left + 4, y + 7, 2, 5);
+  ctx.fillRect(right - 7, y + 7, 2, 5);
+}
+
+function drawHammerPickup(x, feet, now) {
+  const bob = Math.round(Math.sin(now / 180 + x) * 2);
+  const y = Math.round(feet) - 9 + bob;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 7, y + 10, 15, 2);
+  ctx.fillStyle = '#ffec27';
+  ctx.fillRect(x - 1, y, 3, 10);
+  ctx.fillStyle = '#ab5236';
+  ctx.fillRect(x - 7, y - 4, 14, 5);
+  ctx.fillRect(x - 5, y - 6, 10, 2);
+  ctx.fillStyle = '#c2c3c7';
+  ctx.fillRect(x - 6, y - 3, 4, 2);
+  ctx.fillStyle = '#fff1e8';
+  ctx.fillRect(x - 5, y - 5, 3, 1);
 }
 
 function drawKong(x, feet, throwing = false, now = 0, damaged = false) {
@@ -586,6 +626,15 @@ function drawCharacter(player, now) {
     ctx.fillRect(x - 7, top + 8, 5, 3);
     ctx.fillRect(x + 2, top + 8, 5, 3);
   }
+  const handColor = look.kind === 'dino' ? '#00e436' : '#ffccaa';
+  ctx.fillStyle = player.c;
+  ctx.fillRect(x - 9, top + 11, 3, 4);
+  ctx.fillRect(x + 6, top + 11, 3, 4);
+  ctx.fillStyle = handColor;
+  ctx.fillRect(x - 10, top + 13, 4, 3);
+  ctx.fillRect(x + 6, top + 13, 4, 3);
+  ctx.fillRect(x - 11, top + 14, 2, 2);
+  ctx.fillRect(x + 9, top + 14, 2, 2);
   if (player.hm) {
     const swing = Math.floor(now / 80) % 2;
     ctx.fillStyle = '#ffccaa';
@@ -643,7 +692,7 @@ function drawBarrel(x, y, kind, now, direction = 1) {
   ctx.fillRect(x + 4, y + 1, 2, 2);
 }
 
-function drawFireball(x, y, now) {
+function drawFireball(x, y, now, direction = 1) {
   const flicker = Math.floor(now / 75) % 2;
   ctx.fillStyle = '#ff004d';
   ctx.fillRect(x - 5, y - 4, 10, 9);
@@ -656,6 +705,11 @@ function drawFireball(x, y, now) {
   ctx.fillRect(x - 1, y - 2, 3, 4);
   ctx.fillStyle = '#fff1e8';
   ctx.fillRect(x - 1, y - 1, 2, 2);
+  ctx.fillRect(x - 3, y - 3, 2, 2);
+  ctx.fillRect(x + 2, y - 3, 2, 2);
+  ctx.fillStyle = '#151020';
+  ctx.fillRect(x - 2 + Math.sign(direction), y - 2, 1, 2);
+  ctx.fillRect(x + 3 + Math.sign(direction), y - 2, 1, 2);
 }
 
 function drawText(message, x, y, size = 8, color = '#fff1e8', align = 'center') {
