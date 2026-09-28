@@ -10,6 +10,7 @@ const W = canvas.width / SCALE;
 const H = canvas.height / SCALE;
 const FONT = '"Press Start 2P", "Courier New", monospace';
 const PUBLIC_PLAYER_URL = 'https://jueguito-8bits.vercel.app/?player=1';
+const GAME_SERVER_ORIGIN = 'https://jueguito-8bits.onrender.com';
 
 let ws;
 let myId = null;
@@ -29,8 +30,13 @@ function send(message) {
 }
 
 function connect() {
-  const url = new URL(location.href);
-  url.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const pageUrl = new URL(location.href);
+  const isVercelPage = location.hostname.endsWith('.vercel.app');
+  const url = isVercelPage ? new URL(GAME_SERVER_ORIGIN) : new URL(location.origin);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  if (pageUrl.searchParams.get('player') === '1') url.searchParams.set('player', '1');
+  else if (pageUrl.searchParams.has('teacher')) url.searchParams.set('teacher', pageUrl.searchParams.get('teacher'));
+  else if (isVercelPage) url.searchParams.set('role', 'teacher');
   ws = new WebSocket(url);
   ws.onopen = () => { $('#offline').hidden = true; };
   ws.onmessage = event => {
@@ -272,8 +278,8 @@ setInterval(() => {
   }
 }, 50);
 
-function fillBackground() {
-  ctx.fillStyle = '#080b1b';
+function fillBackground(theme = null) {
+  ctx.fillStyle = theme ? theme.bg : '#080b1b';
   ctx.fillRect(0, 0, W, H);
   for (let y = 8; y < H; y += 16) {
     for (let x = (y % 32 ? 7 : 15); x < W; x += 32) {
@@ -286,15 +292,15 @@ function fillBackground() {
 }
 
 function drawWorld(level) {
-  fillBackground();
+  fillBackground(level.theme);
   const floors = level.floors;
   for (let i = 0; i < floors.length; i++) {
     const y = floors[i];
-    ctx.fillStyle = '#ff004d';
+    ctx.fillStyle = level.theme.beam;
     ctx.fillRect(16, y, W - 32, 5);
-    ctx.fillStyle = '#ff77a8';
+    ctx.fillStyle = level.theme.trim;
     ctx.fillRect(16, y, W - 32, 1);
-    ctx.fillStyle = '#7e2553';
+    ctx.fillStyle = '#151020';
     for (let x = 20; x < W - 24; x += 18) {
       ctx.fillRect(x, y + 5, 2, 4);
       ctx.fillRect(x + 8, y + 5, 2, 4);
@@ -305,7 +311,7 @@ function drawWorld(level) {
     const x = level.ladders[i];
     const top = floors[i + 1] + 2;
     const bottom = floors[i] - 1;
-    ctx.fillStyle = '#29adff';
+    ctx.fillStyle = level.theme.ladder;
     ctx.fillRect(x - 5, top, 2, bottom - top);
     ctx.fillRect(x + 4, top, 2, bottom - top);
     for (let y = top + 2; y < bottom; y += 7) ctx.fillRect(x - 5, y, 11, 2);

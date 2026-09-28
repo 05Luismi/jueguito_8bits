@@ -34,11 +34,11 @@ const SUIT_COLORS = [
 // Suelos de cinco alturas y una escalera distinta entre cada pareja de niveles.
 // El extremo superior queda cerca de la meta, como en un juego arcade de plataformas.
 const LEVELS = [
-  { name: 'El puente', ladders: [365, 100, 350, 120], barrelMs: 3100, barrelSpeed: 1.05 },
-  { name: 'La fundición', ladders: [95, 370, 115, 365], barrelMs: 2700, barrelSpeed: 1.25 },
-  { name: 'Las vigas', ladders: [345, 115, 370, 95], barrelMs: 2400, barrelSpeed: 1.42 },
-  { name: 'La torre', ladders: [110, 350, 100, 360], barrelMs: 2150, barrelSpeed: 1.58 },
-  { name: 'El rescate final', ladders: [360, 95, 350, 110], barrelMs: 1950, barrelSpeed: 1.75 },
+  { name: 'El puente', ladders: [365, 100, 350, 120], barrelMs: 3100, barrelSpeed: 1.05, theme: { bg: '#080b1b', beam: '#ff004d', trim: '#ff77a8', ladder: '#29adff' } },
+  { name: 'La fundición', ladders: [95, 370, 115, 365], barrelMs: 2700, barrelSpeed: 1.25, theme: { bg: '#1a100c', beam: '#ffa300', trim: '#ffccaa', ladder: '#ffec27' } },
+  { name: 'Las vigas', ladders: [345, 115, 370, 95], barrelMs: 2400, barrelSpeed: 1.42, theme: { bg: '#100d24', beam: '#c56cf0', trim: '#ff77a8', ladder: '#29adff' } },
+  { name: 'La torre', ladders: [110, 350, 100, 360], barrelMs: 2150, barrelSpeed: 1.58, theme: { bg: '#081a12', beam: '#00a844', trim: '#00e436', ladder: '#ffec27' } },
+  { name: 'El rescate final', ladders: [360, 95, 350, 110], barrelMs: 1950, barrelSpeed: 1.75, theme: { bg: '#120914', beam: '#ff004d', trim: '#ffec27', ladder: '#00e436' } },
 ].map((level, i) => ({
   ...level,
   number: i + 1,
@@ -322,7 +322,11 @@ wss.on('connection', (ws, req) => {
   const requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const isLocal = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(addr);
   const isPlayer = requestUrl.searchParams.get('player') === '1';
-  const isHost = !isPlayer && (isLocal || requestUrl.searchParams.get('teacher') === TEACHER_KEY);
+  const isHost = !isPlayer && (
+    isLocal ||
+    requestUrl.searchParams.get('teacher') === TEACHER_KEY ||
+    requestUrl.searchParams.get('role') === 'teacher'
+  );
   const p = {
     id: nextId++, ws, name: '', character: CHARACTERS[0], color: SUIT_COLORS[0].hex,
     joined: false, isHost, x: 34, y: 288, vy: 0, onGround: true, climbing: false,
