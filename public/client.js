@@ -93,10 +93,11 @@ function onWelcome(m) {
   const localHosts = ['localhost', '127.0.0.1', '::1'];
   // En producción el enlace es el dominio HTTPS (sin añadir el puerto local).
   // En local mostramos las IP de la red del aula con el puerto configurado.
-  const isLocalPage = localHosts.includes(location.hostname);
-  const playerUrls = isLocalPage
-    ? (m.ips.length ? m.ips : [location.hostname]).map(ip => `http://${ip}:${m.port}/`)
-    : [new URL('/', location.origin).href];
+  const isPublicPage = location.protocol === 'https:';
+  const playerUrls = isPublicPage
+    ? [`https://${location.hostname}/`]
+    : (localHosts.includes(location.hostname) ? (m.ips.length ? m.ips : [location.hostname]) : [location.hostname])
+      .map(ip => `http://${ip}:${m.port}/`);
   for (const url of playerUrls) {
     const link = document.createElement('a');
     link.href = url;
