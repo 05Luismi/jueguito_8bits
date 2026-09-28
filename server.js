@@ -14,6 +14,8 @@ const TICK_MS = 1000 / 30;
 const WORLD_W = 480;
 const WORLD_H = 320;
 const MAX_LIVES = 5;
+const MAX_BARRELS = 6;
+const MAX_FIREBALLS = 3;
 const COUNTDOWN_MS = 3000;
 const INTERMISSION_MS = 1800;
 const END_SCREEN_MS = 9000;
@@ -158,6 +160,11 @@ function playerHit(p, reason) {
 
 function spawnBarrel(now) {
   const level = currentLevel();
+  if (hazards.filter(h => h.kind === 'barrel' || h.kind === 'firebarrel').length >= MAX_BARRELS) {
+    // No guardamos una cola de lanzamientos: dejamos respirar la partida.
+    nextBarrelAt = now + level.barrelMs;
+    return;
+  }
   const kind = levelIndex > 0 && Math.random() < 0.32 ? 'firebarrel' : 'barrel';
   hazards.push({
     id: `${levelIndex}-${now}-${Math.random()}`,
@@ -176,6 +183,11 @@ function spawnBarrel(now) {
 
 function spawnFireball(now) {
   const level = currentLevel();
+  const cooldown = Math.max(4300, 8000 - levelIndex * 700);
+  if (hazards.filter(h => h.kind === 'fireball').length >= MAX_FIREBALLS) {
+    nextFireballAt = now + cooldown;
+    return;
+  }
   const floor = 1 + Math.floor(Math.random() * (level.floors.length - 1));
   const dir = Math.random() < 0.5 ? -1 : 1;
   hazards.push({
@@ -188,7 +200,7 @@ function spawnFireball(now) {
     speed: 1.15 + levelIndex * 0.18 + Math.random() * 0.35,
     phase: Math.random() * Math.PI * 2,
   });
-  nextFireballAt = now + Math.max(4300, 8000 - levelIndex * 700);
+  nextFireballAt = now + cooldown;
   events.push({ k: 'fireball' });
 }
 
