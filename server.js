@@ -73,6 +73,7 @@ let phaseStart = Date.now();
 let levelIndex = 0;
 let nextId = 1;
 let nextBarrelAt = 0;
+let nextFireballAt = 0;
 let endMessage = '';
 
 function setPhase(next) { phase = next; phaseStart = Date.now(); }
@@ -103,7 +104,8 @@ function resetPlayerForLevel(p) {
 
 function beginLevel() {
   hazards = [];
-  nextBarrelAt = Date.now() + 1200;
+  nextBarrelAt = Date.now() + 1500;
+  nextFireballAt = Date.now() + 5000;
   for (const p of players.values()) if (p.joined && p.alive) resetPlayerForLevel(p);
   setPhase('countdown');
 }
@@ -151,16 +153,36 @@ function playerHit(p, reason) {
 
 function spawnBarrel(now) {
   const level = currentLevel();
+  const kind = levelIndex > 0 && Math.random() < 0.32 ? 'firebarrel' : 'barrel';
   hazards.push({
     id: `${levelIndex}-${now}-${Math.random()}`,
+    kind,
     x: 455,
     y: level.floors[level.floors.length - 1],
     floor: level.floors.length - 1,
     dir: -1,
-    speed: level.barrelSpeed + Math.random() * 0.3,
+    speed: level.barrelSpeed + Math.random() * 0.3 + (kind === 'firebarrel' ? 0.45 : 0),
   });
   nextBarrelAt = now + level.barrelMs;
-  events.push({ k: 'barrel' });
+  events.push({ k: kind });
+}
+
+function spawnFireball(now) {
+  const level = currentLevel();
+  const floor = 1 + Math.floor(Math.random() * (level.floors.length - 1));
+  const dir = Math.random() < 0.5 ? -1 : 1;
+  hazards.push({
+    id: `fire-${levelIndex}-${now}-${Math.random()}`,
+    kind: 'fireball',
+    x: dir < 0 ? WORLD_W - 22 : 22,
+    y: level.floors[floor],
+    floor,
+    dir,
+    speed: 1.15 + levelIndex * 0.18 + Math.random() * 0.35,
+    phase: Math.random() * Math.PI * 2,
+  });
+  nextFireballAt = now + Math.max(4300, 8000 - levelIndex * 700);
+  events.push({ k: 'fireball' });
 }
 
 function findLadder(level, p) {
@@ -241,14 +263,21 @@ function update() {
   for (const p of active) updatePlayer(p, level);
 
   if (now >= nextBarrelAt) spawnBarrel(now);
+  if (now >= nextFireballAt) spawnFireball(now);
   for (const b of hazards) {
-    b.x += b.dir * b.speed;
-    if (b.x < 18 || b.x > WORLD_W - 18) {
-      if (b.floor > 0) {
-        b.floor--;
-        b.y = level.floors[b.floor];
-        b.dir *= -1;
-      } else b.remove = true;
+    if (b.kind === 'fireball') {
+      b.x += b.dir * b.speed;
+      if (b.x < 18 || b.x > WORLD_W - 18) b.dir *= -1;
+      b.y = level.floors[b.floor] - 7 - Math.abs(Math.sin(now / 175 + b.phase)) * 7;
+    } else {
+      b.x += b.dir * b.speed;
+      if (b.x < 18 || b.x > WORLD_W - 18) {
+        if (b.floor > 0) {
+          b.floor--;
+          b.y = level.floors[b.floor];
+          b.dir *= -1;
+        } else b.remove = true;
+      }
     }
     for (const p of active) {
       if (now < p.invulnerableUntil || p.reachedGoal) continue;
@@ -258,8 +287,9 @@ function update() {
         events.push({ k: 'smash', id: p.id });
         break;
       }
-      if (Math.abs(p.x - b.x) < 13 && Math.abs((p.y - 9) - b.y) < 14) {
-        playerHit(p, 'barril');
+      const radius = b.kind === 'fireball' ? 11 : 13;
+      if (Math.abs(p.x - b.x) < radius && Math.abs((p.y - 9) - b.y) < radius) {
+        playerHit(p, b.kind === 'fireball' ? 'bola de fuego' : b.kind === 'firebarrel' ? 'barril de fuego' : 'barril');
       }
     }
   }
@@ -295,7 +325,7 @@ function snapshot() {
       cl: p.climbing, hm: now < p.hammerUntil, hcd: Math.max(0, p.hammerReadyAt - now), k: p.k,
       inv: now < p.invulnerableUntil,
     })),
-    b: hazards.map(b => ({ x: Math.round(b.x), y: b.y, floor: b.floor })),
+    b: hazards.map(b => ({ x: Math.round(b.x), y: Math.round(b.y), floor: b.floor, kind: b.kind })),
     e: events,
   });
 }

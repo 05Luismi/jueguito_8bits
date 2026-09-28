@@ -186,6 +186,7 @@ function onState(state) {
 function handleEvent(event) {
   if (event.k === 'hit') beep(event.id === myId ? 150 : 240, 0.12, 'sawtooth');
   if (event.k === 'hammer' || event.k === 'smash') beep(330, 0.1);
+  if (event.k === 'fireball' || event.k === 'firebarrel') beep(125, 0.16, 'sawtooth');
   if (event.k === 'level') beep(700, 0.13);
   if (event.k === 'goal') addFeed(`${event.n} llegó a la meta`);
   if (event.k === 'out') addFeed(`${event.n} se quedó sin vidas`);
@@ -318,7 +319,10 @@ function drawWorld(level) {
   }
   drawKong(52, floors[floors.length - 1]);
   drawPauline(level.goalX, floors[floors.length - 1]);
-  for (const barrel of curr.b) drawBarrel(barrel.x, barrel.y - 7);
+  for (const hazard of curr.b) {
+    if (hazard.kind === 'fireball') drawFireball(hazard.x, hazard.y, performance.now());
+    else drawBarrel(hazard.x, hazard.y - 7, hazard.kind, performance.now());
+  }
 }
 
 function drawKong(x, feet) {
@@ -357,69 +361,177 @@ function drawPauline(x, feet) {
   ctx.fillRect(x - 1, y + 13, 3, 3);
 }
 
-function characterType(name) {
-  if (['Peach', 'Daisy', 'Rosalina', 'Pauline'].includes(name)) return 'princess';
-  if (['Yoshi', 'Birdo'].includes(name)) return 'dino';
-  if (name === 'Toad' || name === 'Toadette') return 'toad';
-  if (['Bowser', 'Bowser Jr.', 'Donkey Kong'].includes(name)) return 'monster';
-  return 'hero';
-}
+const CHARACTER_LOOKS = {
+  Mario: { hat: '#ff004d', hair: '#ab5236', accent: '#29adff', kind: 'cap', emblem: 'M', moustache: true },
+  Luigi: { hat: '#00a844', hair: '#ab5236', accent: '#1d2b53', kind: 'cap', emblem: 'L', moustache: true },
+  Peach: { hat: '#ffec27', hair: '#ffa300', accent: '#ff77a8', kind: 'crown' },
+  Daisy: { hat: '#ffec27', hair: '#ffa300', accent: '#ffa300', kind: 'crown' },
+  Yoshi: { hat: '#00e436', hair: '#00a844', accent: '#fff1e8', kind: 'dino' },
+  Toad: { hat: '#fff1e8', hair: '#ffccaa', accent: '#ff004d', kind: 'mushroom' },
+  Toadette: { hat: '#ff77a8', hair: '#ffccaa', accent: '#ff77a8', kind: 'mushroom' },
+  Bowser: { hat: '#ffec27', hair: '#ffa300', accent: '#00a844', kind: 'horns' },
+  'Bowser Jr.': { hat: '#00e436', hair: '#ffccaa', accent: '#ffec27', kind: 'bandana' },
+  'Donkey Kong': { hat: '#ab5236', hair: '#5f3030', accent: '#ff004d', kind: 'ape', moustache: true },
+  Wario: { hat: '#ffec27', hair: '#ab5236', accent: '#83769c', kind: 'cap', emblem: 'W', moustache: true },
+  Waluigi: { hat: '#83769c', hair: '#ab5236', accent: '#7e2553', kind: 'cap', emblem: 'Γ', moustache: true },
+  Rosalina: { hat: '#29adff', hair: '#ffccaa', accent: '#29adff', kind: 'crown' },
+  Pauline: { hat: '#7e2553', hair: '#5f3030', accent: '#ff004d', kind: 'widehat' },
+  Birdo: { hat: '#ff77a8', hair: '#ff77a8', accent: '#ffec27', kind: 'snout' },
+};
 
 function drawCharacter(player, now) {
   if (player.inv && Math.floor(now / 80) % 2) return;
   const x = Math.round(player.x);
   const feet = Math.round(player.y);
-  const top = feet - 19;
-  const type = characterType(player.ch);
-  const hair = type === 'princess' ? '#ffccaa' : (player.ch === 'Luigi' || player.ch === 'Waluigi' ? '#ab5236' : '#ffccaa');
-  const headgear = type === 'toad' ? '#fff1e8' : (type === 'monster' ? '#ffec27' : player.c);
+  const top = feet - 20;
+  const look = CHARACTER_LOOKS[player.ch] || CHARACTER_LOOKS.Mario;
+  const isPrincess = ['Peach', 'Daisy', 'Rosalina', 'Pauline'].includes(player.ch);
+  const isWide = look.kind === 'ape' || look.kind === 'horns';
 
-  // Piernas y zapatos pixelados.
-  ctx.fillStyle = '#202040';
-  ctx.fillRect(x - 5, feet - 6, 4, 5);
-  ctx.fillRect(x + 1, feet - 6, 4, 5);
+  // Sombra, zapatos y piernas con dos frames para dar sensación de marcha.
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 8, feet, 16, 2);
+  const step = Math.floor(now / 110) % 2;
+  ctx.fillStyle = look.kind === 'ape' ? '#5f3030' : '#202040';
+  ctx.fillRect(x - 5 - step, feet - 6, 4, 5);
+  ctx.fillRect(x + 1 + step, feet - 6, 4, 5);
   ctx.fillStyle = '#5f574f';
   ctx.fillRect(x - 7, feet - 2, 6, 2);
   ctx.fillRect(x + 1, feet - 2, 6, 2);
 
-  // Traje: el color elegido por el jugador.
-  ctx.fillStyle = player.c;
-  ctx.fillRect(x - 6, top + 8, 12, 8);
-  if (type === 'princess') {
-    ctx.fillRect(x - 8, top + 14, 16, 3);
+  // Silueta y traje elegido por el jugador.
+  if (look.kind === 'horns') {
+    ctx.fillStyle = '#00a844';
+    ctx.fillRect(x - 10, top + 9, 20, 9);
     ctx.fillStyle = '#ffec27';
-    ctx.fillRect(x - 1, top + 9, 2, 3);
-  } else if (type === 'monster') {
-    ctx.fillRect(x - 8, top + 7, 3, 7);
-    ctx.fillRect(x + 5, top + 7, 3, 7);
+    for (let i = 0; i < 3; i++) ctx.fillRect(x - 7 + i * 6, top + 15, 3, 3);
+  }
+  if (look.kind === 'ape') {
+    ctx.fillStyle = look.hair;
+    ctx.fillRect(x - 9, top + 8, 18, 10);
+    ctx.fillRect(x - 12, top + 10, 4, 6);
+    ctx.fillRect(x + 8, top + 10, 4, 6);
+  }
+  ctx.fillStyle = player.c;
+  ctx.fillRect(x - (isWide ? 8 : 6), top + 8, isWide ? 16 : 12, 8);
+  ctx.fillStyle = look.accent;
+  if (isPrincess) {
+    ctx.fillRect(x - 2, top + 9, 4, 3);
+    ctx.fillRect(x - 6, top + 14, 2, 2);
+    ctx.fillRect(x + 4, top + 14, 2, 2);
+  } else if (look.kind === 'ape') {
+    ctx.fillRect(x - 2, top + 11, 4, 5);
+  } else {
+    ctx.fillRect(x - 1, top + 10, 2, 3);
+  }
+  if (isPrincess) {
+    ctx.fillRect(x - 8, top + 13, 16, 4);
+    ctx.fillStyle = '#ffec27';
+    ctx.fillRect(x - 1, top + 9, 2, 4);
+  } else if (look.kind === 'ape') {
+    ctx.fillStyle = '#ff004d';
+    ctx.fillRect(x - 2, top + 10, 4, 7);
+    ctx.fillStyle = '#ffec27';
+    ctx.fillRect(x - 1, top + 12, 2, 2);
+  } else if (look.kind === 'dino' || look.kind === 'snout') {
+    ctx.fillStyle = look.hair;
+    ctx.fillRect(x - 8, top + 13, 4, 4);
+    ctx.fillRect(x + 4, top + 13, 4, 4);
   }
 
-  // Cara, pelo, gorro o manchas según la familia del personaje.
-  ctx.fillStyle = hair;
+  // Cabeza y accesorios distintos para reconocer cada personaje.
+  ctx.fillStyle = look.kind === 'ape' ? '#ffccaa' : (look.kind === 'dino' ? '#00e436' : '#ffccaa');
   ctx.fillRect(x - 5, top + 2, 10, 8);
-  ctx.fillStyle = headgear;
-  if (type === 'toad') {
+  if (isPrincess || ['cap', 'widehat'].includes(look.kind)) {
+    ctx.fillStyle = look.hair;
+    ctx.fillRect(x - 7, top + 4, 2, 6);
+    ctx.fillRect(x + 5, top + 4, 2, 6);
+    if (isPrincess) {
+      ctx.fillRect(x - 8, top + 9, 3, 5);
+      ctx.fillRect(x + 5, top + 9, 3, 5);
+    }
+  }
+  if (look.kind === 'mushroom') {
+    ctx.fillStyle = look.hat;
     ctx.fillRect(x - 8, top, 16, 5);
     ctx.fillRect(x - 5, top - 3, 10, 3);
-    ctx.fillStyle = player.c;
-    ctx.fillRect(x - 2, top - 3, 4, 3);
-    ctx.fillRect(x - 7, top + 1, 3, 3);
+    ctx.fillStyle = look.accent;
+    ctx.fillRect(x - 6, top + 1, 3, 3);
     ctx.fillRect(x + 4, top + 1, 3, 3);
-  } else if (type === 'dino') {
-    ctx.fillRect(x - 6, top + 1, 12, 5);
-    ctx.fillRect(x + 4, top + 6, 6, 3);
-  } else {
+    ctx.fillRect(x - 1, top - 2, 3, 2);
+    if (player.ch === 'Toadette') {
+      ctx.fillRect(x - 11, top + 3, 4, 5);
+      ctx.fillRect(x + 7, top + 3, 4, 5);
+    }
+  } else if (look.kind === 'crown') {
+    ctx.fillStyle = look.hat;
+    ctx.fillRect(x - 5, top - 2, 10, 3);
+    ctx.fillRect(x - 5, top - 5, 2, 4);
+    ctx.fillRect(x - 1, top - 6, 2, 5);
+    ctx.fillRect(x + 3, top - 5, 2, 4);
+  } else if (look.kind === 'dino' || look.kind === 'snout') {
+    ctx.fillStyle = look.hat;
+    ctx.fillRect(x - 5, top, 10, 4);
+    ctx.fillRect(x + 3, top + 5, 9, 4);
+    ctx.fillStyle = '#fff1e8';
+    ctx.fillRect(x + 2, top + 4, 5, 2);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x + 8, top + 6, 1, 1);
+    if (look.kind === 'snout') {
+      ctx.fillStyle = look.accent;
+      ctx.fillRect(x - 5, top - 4, 4, 3);
+      ctx.fillRect(x - 2, top - 5, 5, 3);
+    }
+  } else if (look.kind === 'horns') {
+    ctx.fillStyle = look.hair;
     ctx.fillRect(x - 6, top, 12, 4);
-    ctx.fillRect(x - 7, top + 2, 3, 3);
-    if (type === 'monster') {
+    ctx.fillStyle = '#fff1e8';
+    ctx.fillRect(x - 7, top - 4, 3, 5);
+    ctx.fillRect(x + 4, top - 4, 3, 5);
+    ctx.fillStyle = '#00a844';
+    ctx.fillRect(x - 8, top + 10, 4, 3);
+    ctx.fillRect(x + 4, top + 10, 4, 3);
+  } else if (look.kind === 'bandana') {
+    ctx.fillStyle = look.hat;
+    ctx.fillRect(x - 6, top, 12, 4);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x - 5, top + 4, 10, 4);
+    ctx.fillStyle = '#fff1e8';
+    ctx.fillRect(x - 3, top + 5, 2, 1);
+    ctx.fillRect(x + 2, top + 5, 2, 1);
+  } else if (look.kind === 'widehat') {
+    ctx.fillStyle = look.hat;
+    ctx.fillRect(x - 7, top + 1, 14, 3);
+    ctx.fillRect(x - 4, top - 3, 8, 5);
+    ctx.fillStyle = '#ffec27';
+    ctx.fillRect(x - 1, top - 2, 2, 2);
+  } else {
+    ctx.fillStyle = look.hat;
+    ctx.fillRect(x - 6, top, 12, 4);
+    ctx.fillRect(x - 8, top + 3, 16, 2);
+    ctx.fillStyle = look.accent;
+    ctx.fillRect(x - 1, top + 1, 3, 2);
+    if (look.emblem) {
+      ctx.font = `4px ${FONT}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillStyle = '#fff1e8';
-      ctx.fillRect(x - 6, top - 3, 3, 4);
-      ctx.fillRect(x + 3, top - 3, 3, 4);
+      ctx.fillText(look.emblem, x, top + 2);
     }
   }
   ctx.fillStyle = '#000';
   ctx.fillRect(x - 3, top + 5, 2, 2);
   ctx.fillRect(x + 2, top + 5, 2, 2);
+  if (look.moustache) {
+    ctx.fillStyle = '#5f3030';
+    ctx.fillRect(x - 5, top + 8, 4, 2);
+    ctx.fillRect(x + 1, top + 8, 4, 2);
+  }
+  if (look.kind === 'ape') {
+    ctx.fillStyle = '#ffccaa';
+    ctx.fillRect(x - 7, top + 8, 5, 3);
+    ctx.fillRect(x + 2, top + 8, 5, 3);
+  }
   if (player.hm) {
     ctx.fillStyle = '#ffccaa';
     ctx.fillRect(x + 7, top + 8, 2, 9);
@@ -435,16 +547,41 @@ function drawCharacter(player, now) {
   }
 }
 
-function drawBarrel(x, y) {
-  ctx.fillStyle = '#ab5236';
+function drawBarrel(x, y, kind, now) {
+  const fire = kind === 'firebarrel';
+  if (fire) {
+    const flicker = Math.floor(now / 90) % 2;
+    ctx.fillStyle = '#ff004d';
+    ctx.fillRect(x - 5, y - 11 - flicker, 4, 5 + flicker);
+    ctx.fillRect(x + 2, y - 12 + flicker, 4, 6 - flicker);
+    ctx.fillStyle = '#ffec27';
+    ctx.fillRect(x - 3, y - 8, 3, 3);
+    ctx.fillRect(x + 3, y - 9, 2, 3);
+  }
+  ctx.fillStyle = fire ? '#d93600' : '#ab5236';
   ctx.fillRect(x - 7, y - 7, 14, 14);
-  ctx.fillStyle = '#ffccaa';
+  ctx.fillStyle = fire ? '#ffec27' : '#ffccaa';
   ctx.fillRect(x - 7, y - 5, 14, 2);
   ctx.fillRect(x - 7, y + 3, 14, 2);
-  ctx.fillStyle = '#5f3030';
+  ctx.fillStyle = fire ? '#ff7700' : '#5f3030';
   ctx.fillRect(x - 1, y - 7, 2, 14);
-  ctx.fillStyle = '#ffec27';
+  ctx.fillStyle = fire ? '#fff1e8' : '#ffec27';
   ctx.fillRect(x - 4, y - 1, 2, 2);
+}
+
+function drawFireball(x, y, now) {
+  const flicker = Math.floor(now / 75) % 2;
+  ctx.fillStyle = '#ff004d';
+  ctx.fillRect(x - 5, y - 4, 10, 9);
+  ctx.fillRect(x - 3 - flicker, y - 7, 5, 4);
+  ctx.fillRect(x + 1, y + 3, 4, 3);
+  ctx.fillStyle = '#ff7700';
+  ctx.fillRect(x - 3, y - 3, 6, 6);
+  ctx.fillRect(x - 1 + flicker, y - 6, 3, 4);
+  ctx.fillStyle = '#ffec27';
+  ctx.fillRect(x - 1, y - 2, 3, 4);
+  ctx.fillStyle = '#fff1e8';
+  ctx.fillRect(x - 1, y - 1, 2, 2);
 }
 
 function drawText(message, x, y, size = 8, color = '#fff1e8', align = 'center') {

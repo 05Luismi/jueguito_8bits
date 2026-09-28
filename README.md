@@ -30,8 +30,9 @@ No basta con hacer otro push para sustituir el servidor de juego de Vercel: las 
 
 ## La aventura
 
-- Cinco niveles con escenarios de distintos colores, escaleras y barriles que ruedan y aceleran.
+- Cinco niveles con escenarios de distintos colores, escaleras, barriles normales, barriles de fuego y bolas de fuego.
 - Cinco vidas por jugador. Al perder una vida, reaparece al inicio del nivel; al perderlas todas, pasa a espectador.
 - Selección de Mario, Luigi, Peach, Daisy, Yoshi, Toad, Toadette, Bowser, Bowser Jr., Donkey Kong, Wario, Waluigi, Rosalina, Pauline y Birdo.
 - Cinco colores de traje para cada personaje.
+- Cada personaje tiene accesorios pixelados propios, además del color de traje elegido.
 - El equipo avanza cuando quienes siguen en la partida alcanzan la meta.
