@@ -1,32 +1,32 @@
-# 8 BITS BATTLE
+# 8 BITS KONG
 
-Juego de 8 bits para el aula en el que todos luchan contra todos y solo puede quedar uno. El equipo del profesor hace de servidor y los alumnos se conectan por WebSockets desde el navegador.
+Aventura de plataformas cooperativa para jugar en el aula desde el navegador. El profesor inicia la partida y los jugadores se conectan a la misma sala mediante WebSockets.
 
-## Arrancar (equipo del profesor)
-1. Doble clic en `INICIAR.bat` (o ejecuta `npm install` y después `npm start`).
-2. Se abre `http://localhost:3000`: es el **panel del profesor**. Tu IP sale arriba a la derecha.
-3. Los alumnos abren en su navegador `http://TU_IP:3000`, escriben su nombre y pulsan **¡A LUCHAR!**
-4. Cuando estén todos, pulsa **EMPEZAR PARTIDA**.
+## Jugar en local
 
-La primera vez, Windows pedirá permiso en el firewall para Node.js: marca **Redes privadas** y acepta.
-
-## Publicar para el aula (Render)
-1. En [Render](https://render.com), crea **New + > Blueprint** y conecta este repositorio de GitHub.
-2. Selecciona el archivo `render.yaml` y establece un valor largo y privado para `TEACHER_KEY`.
-3. Cuando termine el despliegue, Render te dará una URL como `https://jueguito-8bits.onrender.com`.
-4. Comparte esa URL con el alumnado. Para abrir el panel del profesor usa `https://jueguito-8bits.onrender.com/?teacher=TU_TEACHER_KEY`.
-
-No compartas la URL que contiene `teacher`, pues permite iniciar y terminar partidas. En el plan gratuito el primer acceso puede tardar unos segundos mientras el servicio se activa.
-
-Comparte el enlace de jugador que aparece en el panel. En despliegues públicos debe usar el dominio HTTPS tal como lo proporciona Vercel, sin añadir `:3000`; ese puerto solo se usa al ejecutar el servidor localmente.
-
-## Reglas
-- 3 vidas y **10 tiros como máximo** por partida.
-- A los 25 s la zona roja empieza a cerrarse, y fuera de ella pierdes vida. Así la partida siempre termina, aunque todos se queden sin balas.
-- Gana el último que siga vivo. Luego se vuelve a la sala para jugar otra partida.
+1. Ejecuta `INICIAR.bat`, o instala dependencias con `npm install` y arranca con `npm start`.
+2. El profesor abre `http://localhost:3000`.
+3. Los jugadores usan el enlace que aparece en el panel o la dirección local terminada en `/?player=1`.
+4. Cada jugador elige nombre, personaje y color de traje. El profesor pulsa **EMPEZAR AVENTURA**.
 
 ## Controles
-WASD/flechas para moverte · ratón para apuntar · clic o espacio para disparar · M para el sonido
 
-## Ajustes
-Están al principio de `server.js`: `MAX_SHOTS`, `MAX_HP`, `SPEED`, `ZONE_DELAY`, `PORT` y el mapa (`MAP`).
+- **A/D** o **flechas izquierda/derecha**: caminar.
+- **W/S** o **flechas arriba/abajo**: subir o bajar escaleras.
+- **Espacio**: saltar.
+- **X**: usar el mazo cuando esté disponible.
+- **M**: sonido.
+
+## La aventura
+
+- 5 niveles cooperativos con plataformas, escaleras y barriles.
+- 5 vidas para cada jugador. Al perder una vida se vuelve al inicio del nivel; al perderlas todas se pasa a espectador.
+- Los jugadores pueden elegir entre Mario, Luigi, Peach, Daisy, Yoshi, Toad, Toadette, Bowser, Bowser Jr., Donkey Kong, Wario, Waluigi, Rosalina, Pauline y Birdo.
+- Cada personaje puede llevar uno de cinco colores de traje.
+- El equipo avanza cuando todos los jugadores que siguen en la partida llegan a la meta. El profesor puede terminarla y devolver a todos a la sala.
+
+## Profesor y despliegue
+
+En una instalación local, abrir desde `localhost` muestra el panel del profesor. Para habilitar un panel remoto, define `TEACHER_KEY` y abre la página con `?teacher=TU_CLAVE`. El enlace `?player=1` siempre entra como jugador.
+
+El juego necesita un servidor que mantenga la partida y sus conexiones WebSocket. En despliegues públicos comparte la URL HTTPS indicada en el panel y comprueba que el proveedor admita WebSockets.

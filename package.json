@@ -1,7 +1,7 @@
 {
   "name": "8bits-battle",
   "version": "1.0.0",
-  "description": "Battle royale 8 bits para el aula por WebSockets",
+  "description": "Plataformas cooperativo 8 bits para el aula por WebSockets",
   "main": "server.js",
 "scripts": {
   "dev": "node server.js",

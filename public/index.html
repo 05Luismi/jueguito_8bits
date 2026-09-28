@@ -3,69 +3,68 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>8 BITS BATTLE</title>
+  <title>8 BITS KONG</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-  <!-- Pantalla de entrada (alumnos) -->
   <section id="join" class="screen" hidden>
-    <h1 class="title">8 BITS<br><span>BATTLE</span></h1>
-    <p class="blink">¡SOLO PUEDE QUEDAR UNO!</p>
-    <form id="joinForm" class="box">
+    <h1 class="title">8 BITS<br><span>KONG</span></h1>
+    <p class="blink">¡SUBE HASTA LA CIMA Y RESCATA A PAULINE!</p>
+    <form id="joinForm" class="box join-form">
       <label for="nameInput">TU NOMBRE</label>
       <input id="nameInput" maxlength="12" autocomplete="off" spellcheck="false" placeholder="JUGADOR" required>
-      <button type="submit">¡A LUCHAR!</button>
+      <label for="characterSelect">ELIGE PERSONAJE</label>
+      <select id="characterSelect"></select>
+      <label for="colorSelect">COLOR DEL TRAJE</label>
+      <select id="colorSelect"></select>
+      <button type="submit">¡A JUGAR!</button>
     </form>
     <div class="help">
-      <p>MOVER: WASD / FLECHAS</p>
-      <p>APUNTAR: RATÓN</p>
-      <p>DISPARAR: CLIC / ESPACIO</p>
-      <p>SOLO TIENES <b id="helpShots">10</b> TIROS. ¡NO LOS MALGASTES!</p>
+      <p>MOVER: A / D O FLECHAS</p>
+      <p>ESCALERAS: W / S O ↑ / ↓</p>
+      <p>SALTAR: ESPACIO · MAZO: X</p>
+      <p>5 VIDAS · 5 NIVELES</p>
     </div>
   </section>
 
-  <!-- Pantalla de juego -->
   <section id="game" class="screen" hidden>
     <div class="layout">
       <div class="stage">
-        <canvas id="canvas" width="960" height="640"></canvas>
+        <canvas id="canvas" width="960" height="640" aria-label="Juego 8 Bits Kong"></canvas>
         <div class="hud">
-          <div><span class="lbl">VIDA</span> <span id="hudHp" class="hp"></span></div>
-          <div><span class="lbl">TIROS</span> <span id="hudAmmo" class="ammo"></span> <span id="hudAmmoNum"></span></div>
-          <div><span class="lbl">BAJAS</span> <span id="hudKills">0</span></div>
+          <div><span class="lbl">VIDAS</span> <span id="hudHp" class="hp"></span></div>
+          <div><span class="lbl">MAZO</span> <span id="hudHammer" class="hammer-status"></span></div>
+          <div><span class="lbl">NIVEL</span> <span id="hudLevel">1/5</span></div>
         </div>
       </div>
 
       <aside class="side">
         <div class="box addr">
-          <div class="lbl">CONÉCTATE EN</div>
+          <div class="lbl">JUGADORES: ENTRA EN</div>
           <div id="addrList"></div>
         </div>
-
         <div id="hostPanel" class="box" hidden>
           <div class="lbl">PANEL DEL PROFESOR</div>
           <button id="btnStart">EMPEZAR PARTIDA</button>
-          <button id="btnStop" class="secondary">TERMINAR PARTIDA</button>
+          <button id="btnStop" class="secondary">VOLVER A LA SALA</button>
           <form id="hostJoinForm">
             <input id="hostName" maxlength="12" placeholder="JUGAR TAMBIÉN" autocomplete="off">
+            <select id="hostCharacter" aria-label="Personaje del profesor"></select>
+            <select id="hostColor" aria-label="Color del traje del profesor"></select>
             <button type="submit" class="secondary">UNIRME</button>
           </form>
         </div>
-
         <div class="box">
-          <div class="lbl">JUGADORES <span id="aliveCount"></span></div>
+          <div class="lbl">EQUIPO <span id="aliveCount"></span></div>
           <ul id="playerList"></ul>
         </div>
-
         <div class="box">
-          <div class="lbl">BAJAS</div>
+          <div class="lbl">AVENTURA</div>
           <ul id="feed"></ul>
         </div>
-
-        <div class="tiny">M: SONIDO ON/OFF</div>
+        <div class="tiny">ESPACIO: SALTAR · X: MAZO · M: SONIDO</div>
       </aside>
     </div>
   </section>
@@ -74,7 +73,6 @@
     <p>SIN CONEXIÓN CON EL SERVIDOR</p>
     <p class="blink">REINTENTANDO...</p>
   </div>
-
   <script src="client.js"></script>
 </body>
 </html>
